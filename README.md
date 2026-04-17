@@ -56,8 +56,9 @@ cmake --build build --target engine_tests
 ctest --test-dir build --output-on-failure
 ```
 
-The current test executable covers input action bindings, resource reuse, and JSON round-tripping
-for text and tilemap scene data.
+The current test suite covers input action bindings, app mode config normalization, resource reuse,
+scene/gameplay helpers, JSON round-tripping for text and tilemap scene data, and a package smoke
+test for the basic game template.
 
 ## Package
 

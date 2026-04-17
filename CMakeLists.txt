@@ -173,3 +173,19 @@ add_custom_target(package_basic_game_template
     COMMENT "Packaging basic game template executable, config, runtime DLLs, and assets"
     VERBATIM
 )
+
+add_test(
+    NAME package_basic_game_template_smoke
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tests/PackageSmokeTests.ps1
+        -RepoRoot ${CMAKE_SOURCE_DIR}
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_BINARY_DIR}/package_test_dist
+        -Target basic_game_template
+        -PackageName BasicGameTemplateSmoke
+        -ExecutableName basic_game_template.exe
+        -GameConfig ${CMAKE_SOURCE_DIR}/templates/basic_game/basic_game.game.json
+        -AssetsPath ${CMAKE_SOURCE_DIR}/templates/basic_game/assets
+        -ReadmePath ${CMAKE_SOURCE_DIR}/templates/basic_game/README.md
+        -AllowMissingAssets
+)

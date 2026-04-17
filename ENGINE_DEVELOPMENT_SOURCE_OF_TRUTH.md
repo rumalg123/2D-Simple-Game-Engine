@@ -10,9 +10,9 @@ Status values:
 
 ## Current Focus
 
-1. Runtime and packaging regression coverage.
-2. Script lifecycle expansion.
-3. Asset manifest and import workflow.
+1. Script lifecycle expansion.
+2. Asset manifest and import workflow.
+3. 2D physics/collision improvements.
 
 ## Implemented Surface
 
@@ -31,6 +31,7 @@ Status values:
 - Audio system for PCM `.wav` clips, procedural tones, and one-shot playback.
 - Windows package script for selected game executables, configs, assets, runtime DLLs, README, launcher, zip, and manifest.
 - Reusable `templates/basic_game` starter with config, README, input setup, scene helpers, prefab usage, HUD text, and package target.
+- CTest package smoke coverage for selected-game package output.
 
 ## Roadmap
 
@@ -63,7 +64,7 @@ Status values:
 | Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
 | Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
-| In Progress | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests now cover action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, config loading, resources, and scene JSON. Runtime mode and packaging coverage remain planned. |
+| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, config loading, resources, scene JSON, and selected-game package smoke. |
 
 ## Milestone 1: Developer Can Launch A Runtime Game
 
@@ -76,7 +77,7 @@ Required:
 - Done: runtime mode skips editor UI and ImGui setup.
 - Done: dedicated `RuntimeApp` and `EditorApp` wrappers exist.
 - Done: asset and prefab directories come from config.
-- Done: tests cover config defaults and config loading. Build passes; local execution is currently blocked by Windows Application Control.
+- Done: tests cover config defaults, config loading, app mode normalization, and selected-game package smoke.
 
 ## Milestone 2: Developer Can Create A Separate Game
 
