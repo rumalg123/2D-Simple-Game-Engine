@@ -1,5 +1,6 @@
 #pragma once
 
+#include "AssetManifest.h"
 #include "InputMap.h"
 #include "Prefab.h"
 #include "ResourceManager.h"
@@ -12,6 +13,7 @@
 struct PluginContext {
     Scene* scene;
     ResourceManager* resources;
+    AssetManifest* assets;
     PrefabRegistry* prefabs;
     ScriptSystem* scripts;
     InputMap* inputMap;

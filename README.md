@@ -57,8 +57,9 @@ ctest --test-dir build --output-on-failure
 ```
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
-scene/gameplay helpers, script lifecycle callbacks, JSON round-tripping for text and tilemap scene
-data, and a package smoke test for the basic game template.
+asset manifest scan/save/load, scene/gameplay helpers, script lifecycle callbacks, JSON
+round-tripping for text and tilemap scene data, and a package smoke test for the basic game
+template.
 
 ## Package
 
@@ -109,6 +110,20 @@ Or call the package script directly for a selected executable:
   -ReadmePath .\samples\snake\README.md `
   -AllowMissingAssets
 ```
+
+## Assets
+
+Each asset folder can keep an `asset_manifest.json` catalog. The manifest stores stable asset IDs,
+relative paths, asset types, display names, and metadata blocks for sprite sheets, animation clips,
+fonts, and audio.
+
+The editor asset browser can load, scan, and save the manifest. Scanning imports supported texture,
+audio, font, scene, prefab, sprite-sheet metadata, and animation-clip metadata files without
+duplicating existing paths. Texture and sprite-sheet assets can be assigned to the selected sprite
+by ID, so saved scenes reference a stable asset name instead of an incidental editor path.
+
+Game and plugin code can access the current manifest through `GameContext::assets` and
+`PluginContext::assets`.
 
 ## Project Layout
 

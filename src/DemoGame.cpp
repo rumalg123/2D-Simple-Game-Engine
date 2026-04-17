@@ -231,6 +231,7 @@ void DemoGame::registerPlugins(GameContext& context, PluginManager& plugins) {
     PluginContext pluginContext{
         context.scene,
         context.resources,
+        context.assets,
         context.prefabs,
         context.scripts,
         context.inputMap,

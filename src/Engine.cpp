@@ -108,15 +108,6 @@ std::array<unsigned char, 7> glyphRowsFor(char character) {
     }
 }
 
-bool isTextureAsset(const std::filesystem::path& path) {
-    std::string extension = path.extension().string();
-    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char character) {
-        return static_cast<char>(std::tolower(character));
-    });
-    return extension == ".png" || extension == ".jpg" || extension == ".jpeg" || extension == ".bmp" ||
-           extension == ".tga" || extension == ".ppm";
-}
-
 void editStringField(const char* label, std::string& value) {
     std::array<char, 64> buffer{};
     std::snprintf(buffer.data(), buffer.size(), "%s", value.c_str());
@@ -275,6 +266,7 @@ bool Engine::init() {
     jobSystem.start();
     initInputMap();
     initScripts();
+    initAssetManifest();
     initScene();
     initPlugins();
     glContext.release();
@@ -352,6 +344,7 @@ GameContext Engine::makeGameContext() {
     GameContext context;
     context.scene = &scene;
     context.resources = &resources;
+    context.assets = &assetManifest;
     context.prefabs = &prefabs;
     context.scripts = &scriptSystem;
     context.inputMap = &inputMap;
@@ -370,7 +363,7 @@ GameContext Engine::makeGameContext() {
 }
 
 PluginContext Engine::makePluginContext() {
-    return {&scene, &resources, &prefabs, &scriptSystem, &inputMap, &editorStatus};
+    return {&scene, &resources, &assetManifest, &prefabs, &scriptSystem, &inputMap, &editorStatus};
 }
 
 void Engine::notifyGameSceneLoaded() {
@@ -443,6 +436,30 @@ void Engine::initScripts() {
     if (game) {
         GameContext gameContext = makeGameContext();
         game->registerScripts(gameContext);
+    }
+}
+
+void Engine::initAssetManifest() {
+    assetManifest.clear();
+
+    const std::filesystem::path assetRoot = config.assetRoot;
+    if (!std::filesystem::exists(assetRoot)) {
+        return;
+    }
+
+    const std::filesystem::path manifestPath = AssetManifest::defaultManifestPath(assetRoot);
+    std::string error;
+    const bool manifestExists = std::filesystem::exists(manifestPath);
+    if (manifestExists && !assetManifest.loadFromFile(manifestPath.generic_string(), error)) {
+        editorStatus = error;
+        return;
+    }
+
+    const std::size_t added = assetManifest.scanDirectory(assetRoot);
+    if (config.editorEnabled && ((!manifestExists && assetManifest.entryCount() > 0) || added > 0)) {
+        if (!assetManifest.saveToFile(manifestPath.generic_string(), error)) {
+            editorStatus = error;
+        }
     }
 }
 
@@ -1181,6 +1198,8 @@ void Engine::renderInspectorPanel() {
 
 void Engine::renderAssetBrowserPanel() {
     ImGui::Begin("Asset Browser");
+    const std::filesystem::path assetRoot = config.assetRoot;
+    const std::filesystem::path manifestPath = AssetManifest::defaultManifestPath(assetRoot);
 
     if (ImGui::Button("Save Scene")) {
         saveCurrentScene();
@@ -1207,6 +1226,34 @@ void Engine::renderAssetBrowserPanel() {
         editorStatus = success ? "Reloaded file-backed textures." : error;
     }
     ImGui::SameLine();
+    if (ImGui::Button("Load Asset Manifest")) {
+        std::string error;
+        if (assetManifest.loadFromFile(manifestPath.generic_string(), error)) {
+            editorStatus = "Loaded asset manifest: " + manifestPath.generic_string();
+        } else {
+            editorStatus = error;
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Scan Assets")) {
+        const std::size_t added = assetManifest.scanDirectory(assetRoot);
+        std::string error;
+        if (assetManifest.saveToFile(manifestPath.generic_string(), error)) {
+            editorStatus = "Scanned asset manifest. Added " + std::to_string(added) + " asset(s).";
+        } else {
+            editorStatus = error;
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Save Asset Manifest")) {
+        std::string error;
+        if (assetManifest.saveToFile(manifestPath.generic_string(), error)) {
+            editorStatus = "Saved asset manifest: " + manifestPath.generic_string();
+        } else {
+            editorStatus = error;
+        }
+    }
+    ImGui::SameLine();
     ImGui::Checkbox("Auto Reload", &hotReloadEnabled);
 
     ImGui::SeparatorText("Loaded Textures");
@@ -1224,40 +1271,43 @@ void Engine::renderAssetBrowserPanel() {
         }
     }
 
-    ImGui::SeparatorText("Assets");
-    const std::filesystem::path assetRoot = config.assetRoot;
+    ImGui::SeparatorText("Asset Manifest");
+    ImGui::Text("Manifest: %s", manifestPath.generic_string().c_str());
+    ImGui::Text("Catalog entries: %zu", assetManifest.entryCount());
+
     if (!std::filesystem::exists(assetRoot)) {
         ImGui::Text("No assets folder.");
         ImGui::End();
         return;
     }
 
-    std::vector<std::filesystem::directory_entry> entries;
-    for (const std::filesystem::directory_entry& entry : std::filesystem::recursive_directory_iterator(assetRoot)) {
-        if (entry.is_regular_file()) {
-            entries.push_back(entry);
-        }
-    }
-
-    std::sort(entries.begin(), entries.end(), [](const auto& first, const auto& second) {
-        return first.path().generic_string() < second.path().generic_string();
+    std::vector<AssetManifestEntry> entries = assetManifest.getEntries();
+    std::sort(entries.begin(), entries.end(), [](const AssetManifestEntry& first, const AssetManifestEntry& second) {
+        return first.id < second.id;
     });
 
-    for (const std::filesystem::directory_entry& entry : entries) {
-        const std::filesystem::path path = entry.path();
-        const std::string pathText = path.generic_string();
-        ImGui::Text("%s", pathText.c_str());
+    if (entries.empty()) {
+        ImGui::Text("No cataloged assets. Scan the asset folder to import supported files.");
+    }
 
-        if (isTextureAsset(path)) {
+    for (const AssetManifestEntry& entry : entries) {
+        ImGui::Text(
+            "%s [%s]",
+            entry.id.c_str(),
+            AssetManifest::assetTypeToString(entry.type));
+        ImGui::TextDisabled("%s", entry.path.c_str());
+
+        if (entry.type == AssetType::Texture || entry.type == AssetType::SpriteSheet) {
             ImGui::SameLine();
-            ImGui::PushID(pathText.c_str());
+            ImGui::PushID(entry.id.c_str());
             SpriteComponent* selectedSprite =
                 selectedEntity != InvalidEntity ? scene.getSprite(selectedEntity) : nullptr;
             if (ImGui::Button("Use On Selected") && selectedSprite) {
                 try {
-                    selectedSprite->texture = resources.loadTextureFromFile(pathText, pathText);
+                    const std::string texturePath = (assetRoot / entry.path).generic_string();
+                    selectedSprite->texture = resources.loadTextureFromFile(entry.id, texturePath);
                     syncGpuTextures(false);
-                    editorStatus = "Assigned texture: " + pathText;
+                    editorStatus = "Assigned texture asset: " + entry.id;
                 } catch (const std::exception& exception) {
                     editorStatus = exception.what();
                 }

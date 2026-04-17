@@ -10,6 +10,7 @@ class InputMap;
 class PluginManager;
 class PrefabRegistry;
 class ResourceManager;
+class AssetManifest;
 class Scene;
 class ScriptSystem;
 class AudioSystem;
@@ -18,6 +19,7 @@ struct Event;
 struct GameContext {
     Scene* scene = nullptr;
     ResourceManager* resources = nullptr;
+    AssetManifest* assets = nullptr;
     PrefabRegistry* prefabs = nullptr;
     ScriptSystem* scripts = nullptr;
     InputMap* inputMap = nullptr;

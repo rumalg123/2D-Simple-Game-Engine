@@ -12,6 +12,7 @@ find_package(Threads REQUIRED)
 
 add_library(engine_core STATIC
     src/App.cpp
+    src/AssetManifest.cpp
     src/Engine.cpp
     src/AudioSystem.cpp
     src/Renderer.cpp

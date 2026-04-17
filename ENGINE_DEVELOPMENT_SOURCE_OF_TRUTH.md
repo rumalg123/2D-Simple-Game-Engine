@@ -10,9 +10,9 @@ Status values:
 
 ## Current Focus
 
-1. Asset manifest and import workflow.
-2. 2D physics/collision improvements.
-3. UI/editor authoring improvements.
+1. 2D physics/collision improvements.
+2. UI/editor authoring improvements.
+3. Asset metadata consumers for animation, font, and audio workflows.
 
 ## Implemented Surface
 
@@ -30,6 +30,7 @@ Status values:
 - Tilemap components rendered through the sprite path with scene/prefab JSON persistence.
 - Text components for simple block-font HUD and world text.
 - Audio system for PCM `.wav` clips, procedural tones, and one-shot playback.
+- Asset manifest JSON catalog with stable IDs, type inference, scan/import workflow, and metadata blocks for sprite sheets, animation clips, fonts, and audio.
 - Windows package script for selected game executables, configs, assets, runtime DLLs, README, launcher, zip, and manifest.
 - Reusable `templates/basic_game` starter with config, README, input setup, scene helpers, prefab usage, HUD text, and package target.
 - CTest package smoke coverage for selected-game package output.
@@ -53,7 +54,7 @@ Status values:
 | Done | Input mapping | Bind named actions to keyboard keys, gamepad buttons, and gamepad axes | Game code can query actions with `isDown()` and axis pairs with `getAxis()`. |
 | Done | Input events | Add action pressed/released events | `EventType::ActionChanged` reports named action transitions from keyboard and gamepad state. |
 | Done | Scene management | Add game-facing scene load/reload/change APIs | `GameContext` exposes `reloadScene`, `clearScene`, and `loadScene`. |
-| Planned | Asset pipeline | Add asset manifest, stable asset IDs, sprite sheet metadata, animation clips, font assets, audio metadata, and import workflow | Texture loading already exists; metadata and project ownership are missing. |
+| Done | Asset pipeline | Add asset manifest, stable asset IDs, sprite sheet metadata, animation clips, font assets, audio metadata, and import workflow | `AssetManifest` saves/loads `asset_manifest.json`, scans/imports supported files with stable IDs, exposes manifest access through game/plugin contexts, and stores metadata blocks for sprite sheets, animation clips, fonts, and audio. Runtime consumers for those richer metadata blocks and drag/drop editing remain future refinements. |
 | Done | Sprite animation | Add grid-based sprite sheet animation components | Supports atlas rows/columns, frame ranges, playback speed, looping, editor editing, and JSON persistence. |
 | Done | Tilemaps | Add renderable tilemap components | Tilemaps use atlas grids, row-major tile data, layers, tint/alpha, editor inspection, and JSON persistence. |
 | Done | Audio | Add basic game audio playback | Supports Windows WinMM output, 8-bit/16-bit PCM WAV, mono/stereo clips, procedural tones, and one-shot playback. |
@@ -65,7 +66,7 @@ Status values:
 | Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
 | Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
-| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, config loading, resources, scene JSON, and selected-game package smoke. |
+| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, asset manifest scan/save/load, config loading, resources, scene JSON, and selected-game package smoke. |
 
 ## Milestone 1: Developer Can Launch A Runtime Game
 
@@ -101,6 +102,7 @@ Required:
 - Done: tilemap component and editor/JSON support.
 - Done: simple text/HUD component and JSON support.
 - Done: basic audio playback through `GameContext`.
+- Done: asset manifest catalog and scan/import workflow.
 - Done: entity lookup helpers.
 - Done: sprite/text/collider creation helpers.
 - Done: prefab instantiation helpers through `GameContext`.

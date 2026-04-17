@@ -17,6 +17,7 @@ public:
         ImGui::Begin("Plugins");
         ImGui::Text("Loaded plugin: %s", name());
         ImGui::Text("Prefabs: %zu", context.prefabs->prefabCount());
+        ImGui::Text("Assets: %zu", context.assets->entryCount());
         ImGui::Text("Scripts: %zu", context.scripts->scriptCount());
         ImGui::Text("Input actions: %zu", context.inputMap->getActions().size());
 

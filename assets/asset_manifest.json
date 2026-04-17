@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "assets": [
+    {
+      "id": "texture:animated_square",
+      "type": "texture",
+      "name": "animated_square",
+      "path": "animated_square.ppm"
+    },
+    {
+      "id": "texture:player",
+      "type": "texture",
+      "name": "player",
+      "path": "player.ppm"
+    },
+    {
+      "id": "texture:tiles",
+      "type": "texture",
+      "name": "tiles",
+      "path": "tiles.ppm"
+    }
+  ]
+}

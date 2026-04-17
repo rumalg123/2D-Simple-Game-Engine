@@ -6,6 +6,7 @@
 #include "Event.h"
 #include "Game.h"
 #include "GameConfig.h"
+#include "AssetManifest.h"
 #include "AudioSystem.h"
 #include "InputMap.h"
 #include "JobSystem.h"
@@ -39,6 +40,7 @@ private:
     RenderCommandQueue renderCommands;
     Renderer renderer;
     ResourceManager resources;
+    AssetManifest assetManifest;
     Scene scene;
     EventQueue eventQueue;
     PrefabRegistry prefabs;
@@ -67,6 +69,7 @@ private:
     void dispatchGameEvent(const Event& event);
     void dispatchInputActionEvents();
     bool loadSceneFromPath(const std::string& scenePath);
+    void initAssetManifest();
     void initScene();
     void initInputMap();
     void initScripts();

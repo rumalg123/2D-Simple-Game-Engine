@@ -1,4 +1,5 @@
 #include "App.h"
+#include "AssetManifest.h"
 #include "GameConfig.h"
 #include "Game.h"
 #include "Grid.h"
@@ -149,6 +150,70 @@ void testResourceManagerReusesNamedTextures() {
     expect(texture.width == 1 && texture.height == 1, "Solid color texture should be one pixel.");
     expect(texture.pixels.size() == 4, "Solid color texture should contain RGBA bytes.");
     expect(texture.pixels[0] == 255 && texture.pixels[3] == 255, "Solid color texture should keep original pixel data.");
+}
+
+void testAssetManifestScansImportsAndPersists() {
+    TempDirectory temp;
+    const std::filesystem::path assetRoot = temp.get() / "assets";
+    std::filesystem::create_directories(assetRoot / "sprites");
+    std::filesystem::create_directories(assetRoot / "audio");
+    std::filesystem::create_directories(assetRoot / "levels");
+
+    {
+        std::ofstream output(assetRoot / "sprites" / "player.ppm");
+        output << "P3\n1 1\n255\n255 0 0\n";
+    }
+    {
+        std::ofstream output(assetRoot / "sprites" / "hero_atlas.png");
+        output << "not a real png";
+    }
+    {
+        std::ofstream output(assetRoot / "audio" / "jump.wav");
+        output << "not a real wav";
+    }
+    {
+        std::ofstream output(assetRoot / "levels" / "intro.scene.json");
+        output << "{}";
+    }
+
+    AssetManifest manifest;
+    const std::size_t added = manifest.scanDirectory(assetRoot);
+    expect(added == 4, "Asset manifest scan should import supported asset files.");
+    expect(manifest.scanDirectory(assetRoot) == 0, "Repeated asset manifest scan should not duplicate entries.");
+
+    const AssetManifestEntry* player = manifest.findByPath("sprites/player.ppm");
+    expect(player != nullptr, "Scanned texture should be findable by manifest path.");
+    expect(player->id == "texture:sprites/player", "Texture asset id should be stable and path-derived.");
+    expect(player->type == AssetType::Texture, "PPM files should import as texture assets.");
+
+    AssetManifestEntry& atlas =
+        manifest.importAsset(assetRoot, assetRoot / "sprites" / "hero_atlas.png", AssetType::SpriteSheet);
+    atlas.spriteSheet.columns = 4;
+    atlas.spriteSheet.rows = 2;
+    expect(atlas.id == "texture:sprites/hero_atlas", "Explicit type updates should preserve the stable asset id.");
+    expect(atlas.type == AssetType::SpriteSheet, "Explicit import should allow image assets to become sprite sheets.");
+
+    const AssetManifestEntry* audio = manifest.findByPath("audio/jump.wav");
+    expect(audio && audio->type == AssetType::Audio, "WAV files should import as audio assets.");
+
+    const std::filesystem::path manifestPath = AssetManifest::defaultManifestPath(assetRoot);
+    std::string error;
+    expect(manifest.saveToFile(manifestPath.string(), error), "Saving asset manifest failed: " + error);
+
+    AssetManifest loaded;
+    const bool loadedManifest = loaded.loadFromFile(manifestPath.string(), error);
+    if (!loadedManifest) {
+        temp.preserveOnFailure();
+    }
+    expect(loadedManifest, "Loading asset manifest failed: " + error);
+    expect(loaded.entryCount() == manifest.entryCount(), "Loaded manifest should preserve asset count.");
+
+    const AssetManifestEntry* loadedAtlas = loaded.findById(atlas.id);
+    expect(loadedAtlas != nullptr, "Loaded manifest should preserve sprite sheet asset id.");
+    expect(loadedAtlas->type == AssetType::SpriteSheet, "Loaded manifest should preserve sprite sheet type.");
+    expect(
+        loadedAtlas->spriteSheet.columns == 4 && loadedAtlas->spriteSheet.rows == 2,
+        "Loaded manifest should preserve sprite sheet metadata.");
 }
 
 void testGameConfigLoadsFlatJsonAndKeepsDefaults() {
@@ -519,6 +584,7 @@ int main() {
         runTest("InputMap keyboard and gamepad bindings", testInputMapSupportsKeyboardAndGamepadBindings);
         runTest("InputMap action changes", testInputMapPublishesActionChanges);
         runTest("ResourceManager named texture reuse", testResourceManagerReusesNamedTextures);
+        runTest("AssetManifest scan and persistence", testAssetManifestScansImportsAndPersists);
         runTest("GameConfig flat JSON loading", testGameConfigLoadsFlatJsonAndKeepsDefaults);
         runTest("GameConfig invalid window size rejection", testGameConfigRejectsInvalidWindowSize);
         runTest("App mode config normalization", testAppModesNormalizeConfig);
