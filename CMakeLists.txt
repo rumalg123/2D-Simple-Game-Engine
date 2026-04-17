@@ -95,9 +95,32 @@ add_custom_target(package_game
         -File ${CMAKE_SOURCE_DIR}/tools/package.ps1
         -BuildDir ${CMAKE_BINARY_DIR}
         -OutputDir ${CMAKE_SOURCE_DIR}/dist
+        -PackageName SimpleEngine
+        -ExecutableName engine.exe
+        -GameConfig ${CMAKE_SOURCE_DIR}/demo.game.json
+        -AssetsPath ${CMAKE_SOURCE_DIR}/assets
+        -ReadmePath ${CMAKE_SOURCE_DIR}/README.md
         -SkipBuild
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     DEPENDS engine
-    COMMENT "Packaging engine executable, runtime DLLs, and assets"
+    COMMENT "Packaging demo executable, config, runtime DLLs, and assets"
+    VERBATIM
+)
+
+add_custom_target(package_snake_sample
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tools/package.ps1
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_SOURCE_DIR}/dist
+        -PackageName SnakeSample
+        -ExecutableName snake_sample.exe
+        -GameConfig ${CMAKE_SOURCE_DIR}/samples/snake/snake.game.json
+        -AssetsPath ${CMAKE_SOURCE_DIR}/samples/snake/assets
+        -ReadmePath ${CMAKE_SOURCE_DIR}/samples/snake/README.md
+        -AllowMissingAssets
+        -SkipBuild
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS snake_sample
+    COMMENT "Packaging Snake sample executable, config, runtime DLLs, and assets"
     VERBATIM
 )

@@ -3,6 +3,13 @@ param(
     [string]$BuildDir = "build",
     [string]$OutputDir = "dist",
     [string]$PackageName = "SimpleEngine",
+    [string]$ExecutableName = "engine.exe",
+    [string]$BuildTarget = "",
+    [string]$GameConfig = "demo.game.json",
+    [string]$PackageConfigName = "game.config.json",
+    [string]$AssetsPath = "assets",
+    [string]$ReadmePath = "README.md",
+    [switch]$AllowMissingAssets,
     [switch]$SkipBuild,
     [switch]$NoZip
 )
@@ -32,30 +39,41 @@ $BuildPath = Resolve-RepoPath $BuildDir
 $OutputPath = Resolve-RepoPath $OutputDir
 $PackagePath = Join-Path $OutputPath $PackageName
 $ZipPath = Join-Path $OutputPath "$PackageName.zip"
+$ResolvedAssetsPath = Resolve-RepoPath $AssetsPath
+$ResolvedConfigPath = if ($GameConfig) { Resolve-RepoPath $GameConfig } else { "" }
+$ResolvedReadmePath = if ($ReadmePath) { Resolve-RepoPath $ReadmePath } else { "" }
+$PackagedConfigFileName = if ($GameConfig -and $PackageConfigName) { [System.IO.Path]::GetFileName($PackageConfigName) } else { "" }
 
 if (!$SkipBuild) {
     if (!(Test-Path -LiteralPath $BuildPath)) {
         throw "Build directory does not exist: $BuildPath. Run 'cmake -S . -B build' first."
     }
 
-    & cmake --build $BuildPath
+    if ($BuildTarget) {
+        & cmake --build $BuildPath --target $BuildTarget
+    } else {
+        & cmake --build $BuildPath
+    }
     if ($LASTEXITCODE -ne 0) {
         throw "Build failed with exit code $LASTEXITCODE."
     }
 }
 
-$EngineExe = Get-ChildItem -LiteralPath $BuildPath -Recurse -Filter "engine.exe" |
+$GameExe = Get-ChildItem -LiteralPath $BuildPath -Recurse -Filter $ExecutableName |
     Sort-Object FullName |
     Select-Object -First 1
 
-if (!$EngineExe) {
-    throw "Could not find engine.exe under $BuildPath."
+if (!$GameExe) {
+    throw "Could not find $ExecutableName under $BuildPath."
 }
 
-$RuntimeDir = $EngineExe.Directory.FullName
-$AssetsPath = Join-Path $RepoRoot "assets"
-if (!(Test-Path -LiteralPath $AssetsPath)) {
-    throw "Assets directory does not exist: $AssetsPath"
+$RuntimeDir = $GameExe.Directory.FullName
+if (!(Test-Path -LiteralPath $ResolvedAssetsPath) -and !$AllowMissingAssets) {
+    throw "Assets directory does not exist: $ResolvedAssetsPath"
+}
+
+if ($ResolvedConfigPath -and !(Test-Path -LiteralPath $ResolvedConfigPath)) {
+    throw "Game config does not exist: $ResolvedConfigPath"
 }
 
 New-Item -ItemType Directory -Force -Path $OutputPath | Out-Null
@@ -68,34 +86,62 @@ if (Test-Path -LiteralPath $PackagePath) {
 
 New-Item -ItemType Directory -Force -Path $PackagePath | Out-Null
 
-Copy-Item -LiteralPath $EngineExe.FullName -Destination $PackagePath -Force
+Copy-Item -LiteralPath $GameExe.FullName -Destination $PackagePath -Force
 
 Get-ChildItem -LiteralPath $RuntimeDir -Filter "*.dll" | ForEach-Object {
     Copy-Item -LiteralPath $_.FullName -Destination $PackagePath -Force
 }
 
-Copy-Item -LiteralPath $AssetsPath -Destination (Join-Path $PackagePath "assets") -Recurse -Force
+$PackageAssetsPath = Join-Path $PackagePath "assets"
+if (Test-Path -LiteralPath $ResolvedAssetsPath) {
+    Copy-Item -LiteralPath $ResolvedAssetsPath -Destination $PackageAssetsPath -Recurse -Force
+} else {
+    New-Item -ItemType Directory -Force -Path $PackageAssetsPath | Out-Null
+}
 
-$ReadmePath = Join-Path $RepoRoot "README.md"
-if (Test-Path -LiteralPath $ReadmePath) {
-    Copy-Item -LiteralPath $ReadmePath -Destination $PackagePath -Force
+if ($ResolvedConfigPath) {
+    $PackageConfigPath = Join-Path $PackagePath $PackagedConfigFileName
+    $ConfigJson = Get-Content -Raw -LiteralPath $ResolvedConfigPath | ConvertFrom-Json
+    if ($ConfigJson.PSObject.Properties.Name -contains "assetRoot") {
+        $ConfigJson.assetRoot = "assets"
+    }
+    if ($ConfigJson.PSObject.Properties.Name -contains "prefabDirectory") {
+        $ConfigJson.prefabDirectory = "assets/prefabs"
+    }
+    if ($ConfigJson.PSObject.Properties.Name -contains "editorLayoutPath") {
+        $ConfigJson.editorLayoutPath = "assets/editor_layout.ini"
+    }
+    $ConfigJson | ConvertTo-Json | Set-Content -LiteralPath $PackageConfigPath -Encoding ASCII
+}
+
+if ($ResolvedReadmePath -and (Test-Path -LiteralPath $ResolvedReadmePath)) {
+    Copy-Item -LiteralPath $ResolvedReadmePath -Destination (Join-Path $PackagePath "README.md") -Force
+}
+
+$LaunchCommand = "`"$ExecutableName`""
+if ($PackagedConfigFileName) {
+    $LaunchCommand = "`"$ExecutableName`" --config `"$PackagedConfigFileName`" --runtime"
 }
 
 $LaunchBat = @"
 @echo off
 pushd "%~dp0"
-engine.exe
+$LaunchCommand
 popd
 "@
 Set-Content -LiteralPath (Join-Path $PackagePath "launch.bat") -Value $LaunchBat -Encoding ASCII
 
 $Manifest = [ordered]@{
     name = $PackageName
-    executable = "engine.exe"
+    executable = $ExecutableName
     launcher = "launch.bat"
+    config = $PackagedConfigFileName
     assets = "assets"
     platform = "windows"
     builtAt = (Get-Date).ToString("o")
+    sourceExecutable = $GameExe.FullName
+    sourceConfig = $ResolvedConfigPath
+    sourceAssets = $ResolvedAssetsPath
 }
 $Manifest | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $PackagePath "manifest.json") -Encoding ASCII
 

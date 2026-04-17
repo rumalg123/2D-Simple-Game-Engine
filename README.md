@@ -47,8 +47,8 @@ for text and tilemap scene data.
 
 ## Package
 
-Create a distributable folder and zip with the executable, runtime DLLs, assets, README, launcher,
-and package manifest:
+Create a distributable folder and zip with the executable, runtime DLLs, assets, config, README,
+launcher, and package manifest:
 
 ```powershell
 .\tools\package.ps1
@@ -63,6 +63,24 @@ You can also run the CMake target after configuring the project:
 
 ```powershell
 cmake --build build --target package_game
+```
+
+Package the Snake sample as its own runtime game:
+
+```powershell
+cmake --build build --target package_snake_sample
+```
+
+Or call the package script directly for a selected executable:
+
+```powershell
+.\tools\package.ps1 `
+  -PackageName SnakeSample `
+  -ExecutableName snake_sample.exe `
+  -GameConfig .\samples\snake\snake.game.json `
+  -AssetsPath .\samples\snake\assets `
+  -ReadmePath .\samples\snake\README.md `
+  -AllowMissingAssets
 ```
 
 ## Project Layout

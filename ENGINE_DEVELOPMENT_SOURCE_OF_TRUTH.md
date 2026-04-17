@@ -12,7 +12,7 @@ Status values:
 
 1. Game/runtime configuration and runtime-only mode.
 2. Separate sample game projects for Snake and Flappy Bird.
-3. Packaging a selected game project and adding the Flappy Bird sample.
+3. Flappy Bird sample and reusable project template.
 
 ## Implemented Surface
 
@@ -28,7 +28,7 @@ Status values:
 - Tilemap components rendered through the sprite path with scene/prefab JSON persistence.
 - Text components for simple block-font HUD and world text.
 - Audio system for PCM `.wav` clips, procedural tones, and one-shot playback.
-- Baseline Windows package script for the demo executable, runtime DLLs, assets, README, launcher, zip, and manifest.
+- Windows package script for selected game executables, configs, assets, runtime DLLs, README, launcher, zip, and manifest.
 
 ## Roadmap
 
@@ -40,8 +40,8 @@ Status values:
 | In Progress | Game project workflow | Add a project template and sample game project layout | `samples/snake` now builds as a separate executable. `samples/flappy_bird` and `templates/basic_game` remain planned. |
 | Done | Runtime configuration | Add per-game config for title, resolution, editor/runtime mode, asset paths, hot reload, and vsync | Implemented with `GameConfig`, flat JSON loading, and `demo.game.json`. |
 | In Progress | Runtime/editor split | Allow packaged games to run without editor panels | Basic runtime mode skips ImGui/editor UI and still runs rendering, input, audio, scripts, and physics. Dedicated `EditorApp`/`RuntimeApp` split is still planned. |
-| Done | Packaging | Add baseline package output for the demo executable | `tools/package.ps1` and `package_game` produce a folder, zip, launcher, copied assets/runtime DLLs, README, and manifest. |
-| Planned | Packaging | Package a selected game project, not only the demo executable | Output should include game executable, assets, config, runtime DLLs, and manifest. |
+| Done | Packaging | Add baseline package output for the demo executable | `tools/package.ps1` and `package_game` produce a folder, zip, launcher, config, copied assets/runtime DLLs, README, and manifest. |
+| Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample` packages `snake_sample.exe` with its config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
 | Done | Rendering | Render sprites through OpenGL with texture resource reuse | Sprite components are the base render path for normal sprites, text, and tilemaps. |
 | Done | Prefabs and serialization | Save and load scenes and prefabs through JSON | Current JSON covers core transforms, sprites, animation, text, tilemaps, tags, prefabs, and resources. |
 | Done | Gameplay API | Add high-level helpers for sprites, text, colliders, prefabs, tags, and entity lookup | `Scene` now has creation and lookup helpers; `GameContext` can instantiate prefabs. |
@@ -83,9 +83,9 @@ Required:
 - Done: reusable `engine_core` static library exists.
 - Done: game entry points can implement `IGame` and pass the game object into `Engine`.
 - Done: baseline package script can produce a demo distribution folder and zip.
+- Done: packaging can target one selected sample.
 - Planned: `samples/flappy_bird` builds as a separate executable linked to `engine_core`.
 - Planned: reusable `templates/basic_game` exists.
-- Planned: packaging can target one selected sample.
 
 ## Milestone 3: Developer Can Author Gameplay Efficiently
 
