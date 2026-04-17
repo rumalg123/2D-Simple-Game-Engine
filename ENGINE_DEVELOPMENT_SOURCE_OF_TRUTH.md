@@ -10,8 +10,8 @@ Status values:
 
 ## Current Focus
 
-1. 2D physics/collision improvements.
-2. UI/editor authoring improvements.
+1. UI/editor authoring improvements.
+2. Tilemap collision and richer physics scene settings.
 3. Asset metadata consumers for animation, font, and audio workflows.
 
 ## Implemented Surface
@@ -26,6 +26,7 @@ Status values:
 - Dedicated `RuntimeApp` and `EditorApp` wrappers with `runGameApp()` selection from config.
 - Basic event dispatch for key changes, collisions, and triggers through `IGame::onEvent`.
 - Script lifecycle callbacks for create, start, variable update, fixed update, event, and destroy.
+- Collision layers/masks, enter/stay/exit contact phases, and filtered AABB overlap queries.
 - Sprite animation components using grid-based sprite sheets and UV frame selection.
 - Tilemap components rendered through the sprite path with scene/prefab JSON persistence.
 - Text components for simple block-font HUD and world text.
@@ -58,7 +59,8 @@ Status values:
 | Done | Sprite animation | Add grid-based sprite sheet animation components | Supports atlas rows/columns, frame ranges, playback speed, looping, editor editing, and JSON persistence. |
 | Done | Tilemaps | Add renderable tilemap components | Tilemaps use atlas grids, row-major tile data, layers, tint/alpha, editor inspection, and JSON persistence. |
 | Done | Audio | Add basic game audio playback | Supports Windows WinMM output, 8-bit/16-bit PCM WAV, mono/stereo clips, procedural tones, and one-shot playback. |
-| Planned | 2D physics/collision | Add collision layers/masks, enter/stay/exit events, queries, tilemap collision, and physics scene settings | Current AABB physics is enough for simple prototypes but not enough for a fuller engine. |
+| Done | 2D physics/collision | Add collision layers/masks, enter/stay/exit events, and queries | `ColliderComponent` has layer/mask filters, contact events report `CollisionPhase::Enter/Stay/Exit`, `PhysicsSystem::queryAabb()` supports filtered overlap queries, and collider layer/mask fields persist through editor and JSON. |
+| Planned | 2D physics/collision | Add tilemap collision and richer physics scene settings | AABB entity collision is stronger now, but tilemap collision, query shapes beyond AABB, and broader scene-level physics settings remain future work. |
 | Done | Grid gameplay | Add grid/tile helpers for games like Snake | `Grid.h` provides grid containment, indexing, and cell-to-world conversion; Snake uses it. |
 | Done | Text and HUD | Add simple block-font text components | Supports screen-space and world-space text through the sprite batcher, including tint, alpha, layers, and JSON persistence. |
 | Planned | UI system | Add game UI primitives: font rendering, buttons, anchors/layout, menus, overlays | Current block text is useful only for simple HUDs. |
@@ -66,7 +68,7 @@ Status values:
 | Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
 | Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
-| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, asset manifest scan/save/load, config loading, resources, scene JSON, and selected-game package smoke. |
+| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, physics contact phases/filtering/query, asset manifest scan/save/load, config loading, resources, scene JSON, and selected-game package smoke. |
 
 ## Milestone 1: Developer Can Launch A Runtime Game
 
@@ -103,6 +105,7 @@ Required:
 - Done: simple text/HUD component and JSON support.
 - Done: basic audio playback through `GameContext`.
 - Done: asset manifest catalog and scan/import workflow.
+- Done: collision layer/mask filtering, contact phases, and AABB overlap queries.
 - Done: entity lookup helpers.
 - Done: sprite/text/collider creation helpers.
 - Done: prefab instantiation helpers through `GameContext`.

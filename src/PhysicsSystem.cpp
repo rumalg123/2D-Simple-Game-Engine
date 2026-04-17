@@ -1,11 +1,37 @@
 #include "PhysicsSystem.h"
 
 #include <cmath>
+#include <cstdint>
+#include <unordered_set>
+#include <utility>
 #include <vector>
 
 namespace {
+struct ContactPair {
+    Entity first = InvalidEntity;
+    Entity second = InvalidEntity;
+};
+
 float maxValue(float first, float second) {
     return first > second ? first : second;
+}
+
+std::uint64_t pairKey(Entity first, Entity second) {
+    if (first > second) {
+        std::swap(first, second);
+    }
+    return (static_cast<std::uint64_t>(first) << 32u) ^ static_cast<std::uint64_t>(second);
+}
+
+ContactPair pairFromKey(std::uint64_t key) {
+    return {
+        static_cast<Entity>(key >> 32u),
+        static_cast<Entity>(key & 0xFFFFFFFFu)
+    };
+}
+
+bool layersCanCollide(const ColliderComponent& first, const ColliderComponent& second) {
+    return (first.mask & second.layer) != 0u && (second.mask & first.layer) != 0u;
 }
 
 bool overlaps(
@@ -18,12 +44,52 @@ bool overlaps(
            std::abs(firstTransform.y - secondTransform.y) <
                (firstCollider.halfHeight + secondCollider.halfHeight);
 }
+
+CollisionPhase phaseForPair(const std::unordered_set<std::uint64_t>& previousPairs, std::uint64_t key) {
+    return previousPairs.find(key) == previousPairs.end() ? CollisionPhase::Enter : CollisionPhase::Stay;
+}
 }
 
 void PhysicsSystem::update(Scene& scene, EventQueue& events, float deltaTime, JobSystem* jobSystem) {
     integrate(scene, deltaTime, jobSystem);
     resolveWorldBounds(scene);
     resolveCollisions(scene, events);
+}
+
+std::vector<Entity> PhysicsSystem::queryAabb(
+    const Scene& scene,
+    const TransformComponent& transform,
+    const ColliderComponent& collider) const {
+    const ComponentPool<ColliderComponent>& colliders = scene.getColliderPool();
+    std::vector<Entity> hits;
+
+    for (std::size_t index = 0; index < colliders.size(); ++index) {
+        const Entity entity = colliders.entityAt(index);
+        const TransformComponent* otherTransform = scene.getTransform(entity);
+        const ColliderComponent& otherCollider = colliders.componentAt(index);
+        if (!otherTransform || !layersCanCollide(collider, otherCollider)) {
+            continue;
+        }
+
+        if (overlaps(transform, collider, *otherTransform, otherCollider)) {
+            hits.push_back(entity);
+        }
+    }
+
+    return hits;
+}
+
+void PhysicsSystem::setSettings(PhysicsSettings nextSettings) {
+    settings = nextSettings;
+}
+
+const PhysicsSettings& PhysicsSystem::getSettings() const {
+    return settings;
+}
+
+void PhysicsSystem::clearContacts() {
+    previousCollisionPairs.clear();
+    previousTriggerPairs.clear();
 }
 
 void PhysicsSystem::integrate(Scene& scene, float deltaTime, JobSystem* jobSystem) {
@@ -109,6 +175,8 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
     const ComponentPool<ColliderComponent>& colliders = scene.getColliderPool();
     std::vector<Entity> collisionEntities;
     collisionEntities.reserve(colliders.size());
+    std::unordered_set<std::uint64_t> currentCollisionPairs;
+    std::unordered_set<std::uint64_t> currentTriggerPairs;
 
     for (std::size_t index = 0; index < colliders.size(); ++index) {
         const Entity entity = colliders.entityAt(index);
@@ -128,15 +196,20 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
             const ColliderComponent& firstCollider = *scene.getCollider(first);
             const ColliderComponent& secondCollider = *scene.getCollider(second);
 
-            if (!firstTransform || !secondTransform ||
+            if (!firstTransform || !secondTransform || !layersCanCollide(firstCollider, secondCollider) ||
                 !overlaps(*firstTransform, firstCollider, *secondTransform, secondCollider)) {
                 continue;
             }
 
+            const std::uint64_t key = pairKey(first, second);
             const bool isTrigger = firstCollider.trigger || secondCollider.trigger ||
                                    !firstCollider.solid || !secondCollider.solid;
             if (isTrigger) {
-                events.publishTrigger(first, second);
+                currentTriggerPairs.insert(key);
+                const CollisionPhase phase = phaseForPair(previousTriggerPairs, key);
+                if (phase == CollisionPhase::Enter || settings.emitStayEvents) {
+                    events.publishTrigger(first, second, phase);
+                }
                 continue;
             }
 
@@ -146,7 +219,11 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
                 continue;
             }
 
-            events.publishCollision(first, second);
+            currentCollisionPairs.insert(key);
+            const CollisionPhase phase = phaseForPair(previousCollisionPairs, key);
+            if (phase == CollisionPhase::Enter || settings.emitStayEvents) {
+                events.publishCollision(first, second, phase);
+            }
 
             const float deltaX = firstTransform->x - secondTransform->x;
             const float deltaY = firstTransform->y - secondTransform->y;
@@ -186,4 +263,31 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
             }
         }
     }
+
+    if (settings.emitExitEvents) {
+        for (std::uint64_t key : previousCollisionPairs) {
+            if (currentCollisionPairs.find(key) != currentCollisionPairs.end()) {
+                continue;
+            }
+
+            const ContactPair pair = pairFromKey(key);
+            if (scene.isValidEntity(pair.first) && scene.isValidEntity(pair.second)) {
+                events.publishCollision(pair.first, pair.second, CollisionPhase::Exit);
+            }
+        }
+
+        for (std::uint64_t key : previousTriggerPairs) {
+            if (currentTriggerPairs.find(key) != currentTriggerPairs.end()) {
+                continue;
+            }
+
+            const ContactPair pair = pairFromKey(key);
+            if (scene.isValidEntity(pair.first) && scene.isValidEntity(pair.second)) {
+                events.publishTrigger(pair.first, pair.second, CollisionPhase::Exit);
+            }
+        }
+    }
+
+    previousCollisionPairs = std::move(currentCollisionPairs);
+    previousTriggerPairs = std::move(currentTriggerPairs);
 }

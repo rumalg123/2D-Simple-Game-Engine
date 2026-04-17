@@ -15,6 +15,12 @@ enum class EventType {
     Trigger
 };
 
+enum class CollisionPhase {
+    Enter,
+    Stay,
+    Exit
+};
+
 struct KeyChangedEvent {
     int key = 0;
     bool pressed = false;
@@ -29,6 +35,7 @@ struct CollisionEvent {
     Entity first = InvalidEntity;
     Entity second = InvalidEntity;
     bool trigger = false;
+    CollisionPhase phase = CollisionPhase::Enter;
 };
 
 struct Event {
@@ -54,17 +61,17 @@ public:
         events.push_back(eventPool.create(std::move(event)));
     }
 
-    void publishCollision(Entity first, Entity second) {
+    void publishCollision(Entity first, Entity second, CollisionPhase phase = CollisionPhase::Enter) {
         Event event;
         event.type = EventType::Collision;
-        event.collision = {first, second, false};
+        event.collision = {first, second, false, phase};
         events.push_back(eventPool.create(std::move(event)));
     }
 
-    void publishTrigger(Entity first, Entity second) {
+    void publishTrigger(Entity first, Entity second, CollisionPhase phase = CollisionPhase::Enter) {
         Event event;
         event.type = EventType::Trigger;
-        event.collision = {first, second, true};
+        event.collision = {first, second, true, phase};
         events.push_back(eventPool.create(std::move(event)));
     }
 

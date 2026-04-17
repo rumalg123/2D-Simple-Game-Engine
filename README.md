@@ -57,9 +57,9 @@ ctest --test-dir build --output-on-failure
 ```
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
-asset manifest scan/save/load, scene/gameplay helpers, script lifecycle callbacks, JSON
-round-tripping for text and tilemap scene data, and a package smoke test for the basic game
-template.
+asset manifest scan/save/load, scene/gameplay helpers, script lifecycle callbacks, physics contact
+phases and filters, JSON round-tripping for text/tilemap/collider scene data, and a package smoke
+test for the basic game template.
 
 ## Package
 
@@ -195,6 +195,21 @@ context.inputMap->bindGamepadAxis("MoveLeft", GLFW_GAMEPAD_AXIS_LEFT_X, GamepadA
 Gameplay code should read actions by name with `isDown()` or `getAxis()`. `InputComponent` uses
 the same action names, so keyboard and controller input automatically drive entity movement. The
 engine polls connected GLFW gamepads every frame and aggregates them into the active input state.
+
+## Physics And Collision
+
+`ColliderComponent` supports AABB collision with `solid`, `trigger`, `layer`, and `mask` fields.
+Two colliders interact only when both masks include the other collider's layer.
+
+Collision and trigger events include a `CollisionPhase`:
+
+- `Enter` when a pair begins overlapping.
+- `Stay` while the pair remains overlapping.
+- `Exit` when a tracked pair separates.
+
+`PhysicsSystem::queryAabb()` runs the same AABB and layer/mask filtering without moving entities or
+publishing events. Collider layer and mask fields are editable in the inspector and persist through
+scene and prefab JSON.
 
 ## Sprite Animation
 

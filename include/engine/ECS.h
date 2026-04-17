@@ -11,6 +11,8 @@ using TextureHandle = std::size_t;
 
 constexpr Entity InvalidEntity = std::numeric_limits<Entity>::max();
 constexpr TextureHandle InvalidTexture = std::numeric_limits<TextureHandle>::max();
+constexpr unsigned int ColliderLayerDefault = 1u;
+constexpr unsigned int ColliderMaskAll = 0xFFFFFFFFu;
 
 struct TransformComponent {
     float x;
@@ -100,6 +102,8 @@ struct ColliderComponent {
     float halfHeight;
     bool solid;
     bool trigger = false;
+    unsigned int layer = ColliderLayerDefault;
+    unsigned int mask = ColliderMaskAll;
 };
 
 struct BoundsComponent {

@@ -4,6 +4,7 @@
 #include "Game.h"
 #include "Grid.h"
 #include "InputMap.h"
+#include "PhysicsSystem.h"
 #include "Prefab.h"
 #include "ResourceManager.h"
 #include "Scene.h"
@@ -479,6 +480,63 @@ void testScriptCallbacksCanDestroyEntities() {
     expect(calls == expected, "ScriptSystem should clean up instances destroyed by callbacks.");
 }
 
+void testPhysicsCollisionLayersAndContactPhases() {
+    Scene scene;
+    PhysicsSystem physics;
+    EventQueue events;
+
+    const Entity sensor = scene.createEntity();
+    scene.setTransform(sensor, {0.0f, 0.0f});
+    scene.setCollider(sensor, {0.5f, 0.5f, false, true, 1u, 2u});
+
+    const Entity target = scene.createEntity();
+    scene.setTransform(target, {0.25f, 0.0f});
+    scene.setCollider(target, {0.5f, 0.5f, false, true, 2u, 1u});
+
+    physics.update(scene, events, 0.0f);
+    std::vector<Event> drained = events.drain();
+    expect(drained.size() == 1, "First filtered trigger overlap should publish one event.");
+    expect(drained[0].type == EventType::Trigger, "Trigger overlap should publish a trigger event.");
+    expect(drained[0].collision.phase == CollisionPhase::Enter, "First trigger overlap should be Enter.");
+
+    physics.update(scene, events, 0.0f);
+    drained = events.drain();
+    expect(drained.size() == 1, "Persistent trigger overlap should publish one stay event.");
+    expect(drained[0].collision.phase == CollisionPhase::Stay, "Persistent trigger overlap should be Stay.");
+
+    scene.getTransform(target)->x = 5.0f;
+    physics.update(scene, events, 0.0f);
+    drained = events.drain();
+    expect(drained.size() == 1, "Separated trigger overlap should publish one exit event.");
+    expect(drained[0].collision.phase == CollisionPhase::Exit, "Separated trigger overlap should be Exit.");
+
+    scene.getTransform(target)->x = 0.25f;
+    scene.getCollider(target)->mask = 4u;
+    physics.update(scene, events, 0.0f);
+    expect(events.drain().empty(), "Collision masks should suppress non-matching trigger pairs.");
+}
+
+void testPhysicsAabbQueryUsesLayersAndMasks() {
+    Scene scene;
+    PhysicsSystem physics;
+
+    const Entity pickup = scene.createEntity();
+    scene.setTransform(pickup, {0.25f, 0.0f});
+    scene.setCollider(pickup, {0.25f, 0.25f, false, true, 2u, ColliderMaskAll});
+
+    const Entity wall = scene.createEntity();
+    scene.setTransform(wall, {0.0f, 0.25f});
+    scene.setCollider(wall, {0.25f, 0.25f, true, false, 4u, ColliderMaskAll});
+
+    const ColliderComponent pickupOnlyQuery{0.5f, 0.5f, false, true, 1u, 2u};
+    std::vector<Entity> hits = physics.queryAabb(scene, {0.0f, 0.0f}, pickupOnlyQuery);
+    expect(hits.size() == 1 && hits[0] == pickup, "AABB query should honor the query collision mask.");
+
+    const ColliderComponent allQuery{0.5f, 0.5f, false, true, 1u, 2u | 4u};
+    hits = physics.queryAabb(scene, {0.0f, 0.0f}, allQuery);
+    expect(hits.size() == 2, "AABB query should return every overlapping collider allowed by masks.");
+}
+
 void testGridHelpersConvertCells() {
     const GridLayout layout{10, 5, 2.0f, 4.0f, {0.0f, 0.0f}, true};
 
@@ -512,6 +570,7 @@ void testSceneJsonRoundTripsTextAndTilemaps() {
     scene.setTag(entity, {"Tilemap"});
     scene.setTransform(entity, {-1.25f, 1.50f});
     scene.setText(entity, {"HELLO\n2D", 0.04f, 0.07f, 0.01f, 0.02f, 0.9f, 0.8f, 0.7f, 1.0f, 80, false});
+    scene.setCollider(entity, {0.30f, 0.40f, true, false, 4u, 8u});
     scene.setTilemap(entity, {
         3,
         2,
@@ -561,6 +620,12 @@ void testSceneJsonRoundTripsTextAndTilemaps() {
     expectNear(text->characterWidth, 0.04f, "Text character width should round-trip.");
     expect(text->screenSpace == false, "Text screen-space flag should round-trip.");
 
+    const ColliderComponent* collider = loadedScene.getCollider(loadedEntity);
+    expect(collider != nullptr, "Collider component should round-trip.");
+    expectNear(collider->halfWidth, 0.30f, "Collider half width should round-trip.");
+    expect(collider->solid && !collider->trigger, "Collider solid/trigger flags should round-trip.");
+    expect(collider->layer == 4u && collider->mask == 8u, "Collider layer and mask should round-trip.");
+
     const TilemapComponent* tilemap = loadedScene.getTilemap(loadedEntity);
     expect(tilemap != nullptr, "Tilemap component should round-trip.");
     expect(tilemap->columns == 3 && tilemap->rows == 2, "Tilemap dimensions should round-trip.");
@@ -594,6 +659,8 @@ int main() {
         runTest("ScriptSystem lifecycle callbacks", testScriptSystemLifecycleCallbacks);
         runTest("ScriptSystem legacy fixed update", testLegacyScriptRegistrationRunsDuringFixedUpdate);
         runTest("ScriptSystem callback entity destruction", testScriptCallbacksCanDestroyEntities);
+        runTest("Physics collision layers and phases", testPhysicsCollisionLayersAndContactPhases);
+        runTest("Physics AABB query filters", testPhysicsAabbQueryUsesLayersAndMasks);
         runTest("Grid helpers", testGridHelpersConvertCells);
         runTest("Scene JSON text and tilemap round-trip", testSceneJsonRoundTripsTextAndTilemaps);
     } catch (const std::exception& exception) {

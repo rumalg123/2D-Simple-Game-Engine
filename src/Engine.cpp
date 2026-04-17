@@ -404,6 +404,7 @@ void Engine::dispatchInputActionEvents() {
 
 void Engine::initScene() {
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    physicsSystem.clearContacts();
     clearGpuTextureCache();
     resources.clear();
     scene.clear();
@@ -1081,6 +1082,14 @@ void Engine::renderInspectorPanel() {
         ImGui::DragFloat("Collider Half Height", &collider->halfHeight, 0.01f, 0.01f, 5.0f);
         ImGui::Checkbox("Solid", &collider->solid);
         ImGui::Checkbox("Trigger", &collider->trigger);
+        int layer = static_cast<int>(collider->layer);
+        if (ImGui::InputInt("Collision Layer Bits", &layer)) {
+            collider->layer = static_cast<unsigned int>(std::max(0, layer));
+        }
+        int mask = static_cast<int>(collider->mask);
+        if (ImGui::InputInt("Collision Mask Bits", &mask)) {
+            collider->mask = static_cast<unsigned int>(mask);
+        }
         if (ImGui::Button("Remove Collider")) {
             scene.getColliderPool().remove(selectedEntity);
             collider = nullptr;
@@ -1334,6 +1343,7 @@ void Engine::saveCurrentScene() {
 bool Engine::loadSceneFromPath(const std::string& scenePath) {
     std::string error;
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    physicsSystem.clearContacts();
     if (!loadSceneFromJson(scene, resources, scenePath, error)) {
         editorStatus = error;
         return false;
@@ -1391,6 +1401,7 @@ void Engine::reloadPrefabAssets() {
 
 void Engine::newEmptyScene() {
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    physicsSystem.clearContacts();
     scene.clear();
     scene.setCamera({0.0f, 0.0f, 1.0f, 1.0f, InvalidEntity});
     selectedEntity = InvalidEntity;
@@ -1895,6 +1906,7 @@ void Engine::submitRenderCommand(std::string label, RenderCommandQueue::Command 
 
 void Engine::cleanup() {
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    physicsSystem.clearContacts();
     PluginContext pluginContext = makePluginContext();
     pluginManager.unloadAll(pluginContext);
     jobSystem.stop();

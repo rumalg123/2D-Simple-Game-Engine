@@ -52,6 +52,14 @@ void writeInt(std::ostream& output, const char* name, int value, bool trailingCo
     output << '\n';
 }
 
+void writeUnsigned(std::ostream& output, const char* name, unsigned int value, bool trailingComma) {
+    output << "        \"" << name << "\": " << value;
+    if (trailingComma) {
+        output << ',';
+    }
+    output << '\n';
+}
+
 void writeSpriteFields(std::ostream& output, const SpriteComponent& sprite, const ResourceManager& resources) {
     const bool hasTextureReference = sprite.texture != InvalidTexture && sprite.texture < resources.textureCount();
 
@@ -476,6 +484,14 @@ int readIntField(const JsonValue& value, const char* name, int fallback) {
     return field && field->type == JsonValue::Type::Number ? static_cast<int>(field->number) : fallback;
 }
 
+unsigned int readUnsignedField(const JsonValue& value, const char* name, unsigned int fallback) {
+    const JsonValue* field = objectField(value, name);
+    if (!field || field->type != JsonValue::Type::Number || field->number < 0.0) {
+        return fallback;
+    }
+    return static_cast<unsigned int>(field->number);
+}
+
 Entity readEntityField(const JsonValue& value, const char* name, Entity fallback) {
     const JsonValue* field = objectField(value, name);
     return field && field->type == JsonValue::Type::Number ? static_cast<Entity>(field->number) : fallback;
@@ -673,7 +689,9 @@ Prefab readPrefabFromComponents(
             readFloatField(*collider, "halfWidth", 0.10f),
             readFloatField(*collider, "halfHeight", 0.10f),
             readBoolField(*collider, "solid", true),
-            readBoolField(*collider, "trigger", false)
+            readBoolField(*collider, "trigger", false),
+            readUnsignedField(*collider, "layer", ColliderLayerDefault),
+            readUnsignedField(*collider, "mask", ColliderMaskAll)
         };
     }
     if (const JsonValue* bounds = objectField(components, "bounds")) {
@@ -756,7 +774,9 @@ void applyEntityComponents(Scene& scene, ResourceManager& resources, Entity enti
             readFloatField(*collider, "halfWidth", 0.10f),
             readFloatField(*collider, "halfHeight", 0.10f),
             readBoolField(*collider, "solid", true),
-            readBoolField(*collider, "trigger", false)
+            readBoolField(*collider, "trigger", false),
+            readUnsignedField(*collider, "layer", ColliderLayerDefault),
+            readUnsignedField(*collider, "mask", ColliderMaskAll)
         });
     }
     if (const JsonValue* bounds = objectField(components, "bounds")) {
@@ -909,7 +929,9 @@ bool saveSceneToJson(const Scene& scene, const ResourceManager& resources, const
             writeFloat(output, "halfWidth", collider->halfWidth, true);
             writeFloat(output, "halfHeight", collider->halfHeight, true);
             writeBool(output, "solid", collider->solid, true);
-            writeBool(output, "trigger", collider->trigger, false);
+            writeBool(output, "trigger", collider->trigger, true);
+            writeUnsigned(output, "layer", collider->layer, true);
+            writeUnsigned(output, "mask", collider->mask, false);
             output << "      }";
         }
 
@@ -1075,7 +1097,9 @@ bool saveEntityPrefabToJson(
         writeFloat(output, "halfWidth", collider->halfWidth, true);
         writeFloat(output, "halfHeight", collider->halfHeight, true);
         writeBool(output, "solid", collider->solid, true);
-        writeBool(output, "trigger", collider->trigger, false);
+        writeBool(output, "trigger", collider->trigger, true);
+        writeUnsigned(output, "layer", collider->layer, true);
+        writeUnsigned(output, "mask", collider->mask, false);
         output << "    }";
     }
 
