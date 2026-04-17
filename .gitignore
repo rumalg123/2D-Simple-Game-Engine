@@ -1,0 +1,65 @@
+# Build directories
+build/
+cmake-build-*/
+out/
+
+# CMake generated files
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+CTestTestfile.cmake
+Testing/
+Makefile
+compile_commands.json
+install_manifest.txt
+
+# Packaged game/runtime output
+dist/
+*.zip
+*.7z
+*.tar
+*.tar.gz
+
+# Native build artifacts
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.pdb
+*.ilk
+*.exp
+*.manifest
+*.res
+
+# Compiler and linker dependency files
+*.d
+*.rsp
+*.ts
+
+# Runtime logs and temporary files
+*.log
+*.tmp
+*.temp
+*.bak
+*.orig
+
+# Editor and OS local files
+.vscode/
+.vs/
+.idea/
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+Desktop.ini
+Thumbs.db
+.DS_Store
+
+# Local environment files
+.env
+.env.*
+

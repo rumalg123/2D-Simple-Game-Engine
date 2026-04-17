@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Snake Sample",
+  "windowWidth": 800,
+  "windowHeight": 600,
+  "editorEnabled": false,
+  "startPlaying": true,
+  "hotReload": false,
+  "vsync": true,
+  "assetRoot": "samples/snake/assets",
+  "prefabDirectory": "samples/snake/assets/prefabs",
+  "editorLayoutPath": "assets/editor_layout.ini"
+}
+

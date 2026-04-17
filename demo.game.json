@@ -1,0 +1,13 @@
+{
+  "windowTitle": "SimpleEngine Demo",
+  "windowWidth": 800,
+  "windowHeight": 600,
+  "editorEnabled": true,
+  "startPlaying": true,
+  "hotReload": true,
+  "vsync": true,
+  "assetRoot": "assets",
+  "prefabDirectory": "assets/prefabs",
+  "editorLayoutPath": "assets/editor_layout.ini"
+}
+

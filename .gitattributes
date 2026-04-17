@@ -1,0 +1,26 @@
+* text=auto
+
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+
+*.cpp text
+*.c text
+*.h text
+*.hpp text
+*.cmake text
+CMakeLists.txt text
+*.md text
+*.json text
+*.ini text
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.bmp binary
+*.tga binary
+*.wav binary
+*.zip binary
+*.exe binary
+*.dll binary
+
