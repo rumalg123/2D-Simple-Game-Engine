@@ -57,8 +57,8 @@ ctest --test-dir build --output-on-failure
 ```
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
-scene/gameplay helpers, JSON round-tripping for text and tilemap scene data, and a package smoke
-test for the basic game template.
+scene/gameplay helpers, script lifecycle callbacks, JSON round-tripping for text and tilemap scene
+data, and a package smoke test for the basic game template.
 
 ## Package
 
@@ -150,6 +150,22 @@ directly when an executable must always start with editor UI. `runGameApp()` cho
 from `GameConfig::editorEnabled`.
 
 The current demo follows this pattern with `createDemoGame()`.
+
+## Scripts
+
+Register entity scripts from `IGame::registerScripts` through `GameContext::scripts`.
+
+`ScriptSystem::ScriptLifecycle` supports:
+
+- `onCreate` when a script instance first appears on an entity.
+- `onStart` before the first active update, fixed update, or event.
+- `onUpdate` once per rendered frame while the simulation is playing.
+- `onFixedUpdate` during the fixed timestep.
+- `onEvent` for key, action, collision, and trigger events while the simulation is playing.
+- `onDestroy` before a tracked script entity is destroyed or the scene is cleared.
+
+The older `registerScript(name, update, parameters)` form still works and maps to fixed update so
+existing fixed-timestep gameplay scripts keep their original behavior.
 
 ## Input
 

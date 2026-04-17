@@ -10,9 +10,9 @@ Status values:
 
 ## Current Focus
 
-1. Script lifecycle expansion.
-2. Asset manifest and import workflow.
-3. 2D physics/collision improvements.
+1. Asset manifest and import workflow.
+2. 2D physics/collision improvements.
+3. UI/editor authoring improvements.
 
 ## Implemented Surface
 
@@ -25,6 +25,7 @@ Status values:
 - Game-facing helpers for entity lookup, sprite/text/collider creation, prefab instantiation, and grid-to-world conversion.
 - Dedicated `RuntimeApp` and `EditorApp` wrappers with `runGameApp()` selection from config.
 - Basic event dispatch for key changes, collisions, and triggers through `IGame::onEvent`.
+- Script lifecycle callbacks for create, start, variable update, fixed update, event, and destroy.
 - Sprite animation components using grid-based sprite sheets and UV frame selection.
 - Tilemap components rendered through the sprite path with scene/prefab JSON persistence.
 - Text components for simple block-font HUD and world text.
@@ -48,7 +49,7 @@ Status values:
 | Done | Rendering | Render sprites through OpenGL with texture resource reuse | Sprite components are the base render path for normal sprites, text, and tilemaps. |
 | Done | Prefabs and serialization | Save and load scenes and prefabs through JSON | Current JSON covers core transforms, sprites, animation, text, tilemaps, tags, prefabs, and resources. |
 | Done | Gameplay API | Add high-level helpers for sprites, text, colliders, prefabs, tags, and entity lookup | `Scene` now has creation and lookup helpers; `GameContext` can instantiate prefabs. |
-| Planned | Script lifecycle | Add script callbacks for create/start/update/fixed update/destroy/collision/trigger/input | Support multiple scripts per entity and script-owned state later. |
+| Done | Script lifecycle | Add script callbacks for create/start/update/fixed update/destroy/collision/trigger/input | `ScriptLifecycle` covers create, start, variable update, fixed update, destroy, and event dispatch for key, action, collision, and trigger events while playing. Legacy script registration maps to fixed update. Multiple scripts per entity and script-owned state remain future work. |
 | Done | Input mapping | Bind named actions to keyboard keys, gamepad buttons, and gamepad axes | Game code can query actions with `isDown()` and axis pairs with `getAxis()`. |
 | Done | Input events | Add action pressed/released events | `EventType::ActionChanged` reports named action transitions from keyboard and gamepad state. |
 | Done | Scene management | Add game-facing scene load/reload/change APIs | `GameContext` exposes `reloadScene`, `clearScene`, and `loadScene`. |
@@ -64,7 +65,7 @@ Status values:
 | Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
 | Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
-| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, config loading, resources, scene JSON, and selected-game package smoke. |
+| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, config loading, resources, scene JSON, and selected-game package smoke. |
 
 ## Milestone 1: Developer Can Launch A Runtime Game
 
@@ -104,6 +105,7 @@ Required:
 - Done: sprite/text/collider creation helpers.
 - Done: prefab instantiation helpers through `GameContext`.
 - Done: action pressed/released input events.
+- Done: script lifecycle callbacks for create/start/update/fixed update/event/destroy.
 - Done: scene reload/change APIs.
 - Done: Snake sample uses grid helpers.
 - Done: Flappy Bird sample uses runtime scene/prefab helpers.

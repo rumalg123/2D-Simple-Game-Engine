@@ -7,6 +7,7 @@
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "SceneSerializer.h"
+#include "ScriptSystem.h"
 
 #include <chrono>
 #include <cmath>
@@ -304,6 +305,115 @@ void testGameContextSceneRequests() {
     expect(loadedPath == "levels/one.scene.json", "GameContext should pass the requested scene path.");
 }
 
+void testScriptSystemLifecycleCallbacks() {
+    Scene scene;
+    ScriptSystem scripts;
+    std::vector<std::string> calls;
+
+    ScriptSystem::ScriptLifecycle lifecycle;
+    lifecycle.onCreate = [&calls](ScriptContext&, Entity, ScriptComponent& script) {
+        calls.push_back("create");
+        script.parameters["created"] = 1.0f;
+    };
+    lifecycle.onStart = [&calls](ScriptContext&, Entity, ScriptComponent&) {
+        calls.push_back("start");
+    };
+    lifecycle.onUpdate = [&calls](ScriptContext&, Entity, ScriptComponent&, float deltaTime) {
+        calls.push_back(deltaTime > 0.0f ? "update" : "bad_update");
+    };
+    lifecycle.onFixedUpdate = [&calls](ScriptContext&, Entity, ScriptComponent& script, float deltaTime) {
+        calls.push_back(deltaTime > 0.0f ? "fixed" : "bad_fixed");
+        script.parameters["fixed"] = 1.0f;
+    };
+    lifecycle.onEvent = [&calls](ScriptContext&, Entity, ScriptComponent&, const Event& event) {
+        if (event.type == EventType::ActionChanged && event.action.pressed) {
+            calls.push_back("event:" + event.action.actionName);
+        }
+    };
+    lifecycle.onDestroy = [&calls](ScriptContext&, Entity, ScriptComponent& script) {
+        calls.push_back(script.parameters.count("fixed") ? "destroy" : "bad_destroy");
+    };
+
+    scripts.registerScript("probe", lifecycle, {{"speed", 2.0f, 0.0f, 10.0f}});
+
+    const Entity entity = scene.createEntity();
+    scene.setScript(entity, {"probe", true, 0.0f});
+
+    scripts.update(scene, 0.25f);
+    ScriptComponent* script = scene.getScript(entity);
+    expect(script != nullptr, "Lifecycle script should still exist after update.");
+    expectNear(script->parameters["created"], 1.0f, "onCreate should be able to mutate script parameters.");
+    expectNear(script->parameters["speed"], 2.0f, "Script default parameters should be applied.");
+
+    scripts.fixedUpdate(scene, 0.5f);
+
+    Event event;
+    event.type = EventType::ActionChanged;
+    event.action = {"Confirm", true};
+    scripts.handleEvent(scene, event);
+
+    scripts.destroyEntity(scene, entity);
+    scene.destroyEntity(entity);
+
+    const std::vector<std::string> expected{
+        "create",
+        "start",
+        "update",
+        "fixed",
+        "event:Confirm",
+        "destroy"
+    };
+    expect(calls == expected, "Script lifecycle callbacks should run in the expected order.");
+}
+
+void testLegacyScriptRegistrationRunsDuringFixedUpdate() {
+    Scene scene;
+    ScriptSystem scripts;
+    int updateCount = 0;
+
+    scripts.registerScript("legacy", [&updateCount](ScriptContext&, Entity, ScriptComponent&, float) {
+        ++updateCount;
+    });
+
+    const Entity entity = scene.createEntity();
+    scene.setScript(entity, {"legacy", true, 0.0f});
+
+    scripts.update(scene, 0.25f);
+    expect(updateCount == 0, "Legacy script update should not run during variable update.");
+
+    scripts.fixedUpdate(scene, 0.25f);
+    expect(updateCount == 1, "Legacy script update should run during fixed update.");
+}
+
+void testScriptCallbacksCanDestroyEntities() {
+    Scene scene;
+    ScriptSystem scripts;
+    std::vector<std::string> calls;
+
+    ScriptSystem::ScriptLifecycle lifecycle;
+    lifecycle.onUpdate = [&calls](ScriptContext& context, Entity entity, ScriptComponent& script, float) {
+        calls.push_back("update");
+        script.parameters["touched"] = 1.0f;
+        context.scene->destroyEntity(entity);
+    };
+    lifecycle.onDestroy = [&calls](ScriptContext&, Entity, ScriptComponent&) {
+        calls.push_back("destroy");
+    };
+
+    scripts.registerScript("self_destruct", lifecycle);
+
+    const Entity entity = scene.createEntity();
+    scene.setScript(entity, {"self_destruct", true, 0.0f});
+
+    scripts.update(scene, 0.25f);
+    expect(!scene.isValidEntity(entity), "Script callback should be able to destroy its entity.");
+
+    scripts.update(scene, 0.25f);
+
+    const std::vector<std::string> expected{"update", "destroy"};
+    expect(calls == expected, "ScriptSystem should clean up instances destroyed by callbacks.");
+}
+
 void testGridHelpersConvertCells() {
     const GridLayout layout{10, 5, 2.0f, 4.0f, {0.0f, 0.0f}, true};
 
@@ -415,6 +525,9 @@ int main() {
         runTest("Scene gameplay helpers", testSceneGameplayHelpersFindEntities);
         runTest("GameContext prefab helpers", testGameContextInstantiatesPrefabs);
         runTest("GameContext scene requests", testGameContextSceneRequests);
+        runTest("ScriptSystem lifecycle callbacks", testScriptSystemLifecycleCallbacks);
+        runTest("ScriptSystem legacy fixed update", testLegacyScriptRegistrationRunsDuringFixedUpdate);
+        runTest("ScriptSystem callback entity destruction", testScriptCallbacksCanDestroyEntities);
         runTest("Grid helpers", testGridHelpersConvertCells);
         runTest("Scene JSON text and tilemap round-trip", testSceneJsonRoundTripsTextAndTilemaps);
     } catch (const std::exception& exception) {

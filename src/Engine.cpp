@@ -300,9 +300,10 @@ void Engine::run() {
         updateGamepadInput();
 
         if (isPlaying) {
+            scriptSystem.update(scene, deltaTime, &prefabs, &inputMap);
             while (accumulatedTime >= FixedDeltaTime) {
                 inputSystem();
-                scriptSystem.update(scene, FixedDeltaTime, &prefabs, &inputMap);
+                scriptSystem.fixedUpdate(scene, FixedDeltaTime, &prefabs, &inputMap);
                 if (game) {
                     GameContext gameContext = makeGameContext();
                     game->onFixedUpdate(gameContext, FixedDeltaTime);
@@ -396,6 +397,10 @@ void Engine::dispatchInputActionEvents() {
         event.type = EventType::ActionChanged;
         event.action = {change.actionName, change.pressed};
 
+        if (isPlaying) {
+            scriptSystem.handleEvent(scene, event, &prefabs, &inputMap);
+        }
+
         if (change.actionName == "ResetScene" && change.pressed) {
             initScene();
         }
@@ -405,6 +410,7 @@ void Engine::dispatchInputActionEvents() {
 }
 
 void Engine::initScene() {
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     clearGpuTextureCache();
     resources.clear();
     scene.clear();
@@ -1277,6 +1283,7 @@ void Engine::saveCurrentScene() {
 
 bool Engine::loadSceneFromPath(const std::string& scenePath) {
     std::string error;
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     if (!loadSceneFromJson(scene, resources, scenePath, error)) {
         editorStatus = error;
         return false;
@@ -1333,6 +1340,7 @@ void Engine::reloadPrefabAssets() {
 }
 
 void Engine::newEmptyScene() {
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     scene.clear();
     scene.setCamera({0.0f, 0.0f, 1.0f, 1.0f, InvalidEntity});
     selectedEntity = InvalidEntity;
@@ -1413,6 +1421,7 @@ void Engine::deleteEntity(Entity entity) {
         return;
     }
 
+    scriptSystem.destroyEntity(scene, entity, &prefabs, &inputMap);
     scene.destroyEntity(entity);
     if (selectedEntity == entity) {
         selectedEntity = InvalidEntity;
@@ -1445,6 +1454,9 @@ void Engine::eventSystem() {
             }
         }
 
+        if (isPlaying) {
+            scriptSystem.handleEvent(scene, event, &prefabs, &inputMap);
+        }
         dispatchGameEvent(event);
     }
 }
@@ -1581,6 +1593,7 @@ void Engine::lifetimeSystem(float deltaTime) {
     }
 
     for (Entity entity : expiredEntities) {
+        scriptSystem.destroyEntity(scene, entity, &prefabs, &inputMap);
         scene.destroyEntity(entity);
         if (selectedEntity == entity) {
             selectedEntity = InvalidEntity;
@@ -1831,6 +1844,7 @@ void Engine::submitRenderCommand(std::string label, RenderCommandQueue::Command 
 }
 
 void Engine::cleanup() {
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     PluginContext pluginContext = makePluginContext();
     pluginManager.unloadAll(pluginContext);
     jobSystem.stop();
