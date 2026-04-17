@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Flappy Bird Sample",
+  "windowWidth": 800,
+  "windowHeight": 600,
+  "editorEnabled": false,
+  "startPlaying": true,
+  "hotReload": false,
+  "vsync": true,
+  "assetRoot": "samples/flappy_bird/assets",
+  "prefabDirectory": "samples/flappy_bird/assets/prefabs",
+  "editorLayoutPath": "assets/editor_layout.ini"
+}
+

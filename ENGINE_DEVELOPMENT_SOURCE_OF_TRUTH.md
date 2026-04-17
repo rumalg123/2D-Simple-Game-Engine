@@ -10,13 +10,13 @@ Status values:
 
 ## Current Focus
 
-1. Game/runtime configuration and runtime-only mode.
-2. Separate sample game projects for Snake and Flappy Bird.
-3. Flappy Bird sample and reusable project template.
+1. Reusable basic game project template.
+2. Dedicated editor/runtime app split.
+3. Runtime and packaging regression coverage.
 
 ## Implemented Surface
 
-- Reusable `engine_core` static library with `engine`, `engine_tests`, and `snake_sample` executables.
+- Reusable `engine_core` static library with `engine`, `engine_tests`, `snake_sample`, and `flappy_bird_sample` executables.
 - `IGame` hook interface through `configureInput`, `registerScripts`, `loadInitialScene`, `registerPlugins`, `onFixedUpdate`, `onEvent`, and `debugStats`.
 - ECS scene model with OpenGL sprite rendering, prefabs, JSON scene/prefab save and load, and an ImGui editor.
 - Named input actions with keyboard keys, gamepad buttons, gamepad axes, `isDown()`, and `getAxis()`.
@@ -37,11 +37,11 @@ Status values:
 | Done | Source of truth | Keep this file as the canonical roadmap | Update status here as features are implemented. |
 | Done | Core architecture | Split reusable engine code into `engine_core` | Demo, tests, and `snake_sample` all link against the static library. |
 | Done | Game hook API | Add an `IGame` and `GameContext` entry point for game code | Hooks cover input setup, script registration, scene loading, plugins, fixed update, events, and debug stats. |
-| In Progress | Game project workflow | Add a project template and sample game project layout | `samples/snake` now builds as a separate executable. `samples/flappy_bird` and `templates/basic_game` remain planned. |
+| In Progress | Game project workflow | Add a project template and sample game project layout | `samples/snake` and `samples/flappy_bird` build as separate executables. `templates/basic_game` remains planned. |
 | Done | Runtime configuration | Add per-game config for title, resolution, editor/runtime mode, asset paths, hot reload, and vsync | Implemented with `GameConfig`, flat JSON loading, and `demo.game.json`. |
 | In Progress | Runtime/editor split | Allow packaged games to run without editor panels | Basic runtime mode skips ImGui/editor UI and still runs rendering, input, audio, scripts, and physics. Dedicated `EditorApp`/`RuntimeApp` split is still planned. |
 | Done | Packaging | Add baseline package output for the demo executable | `tools/package.ps1` and `package_game` produce a folder, zip, launcher, config, copied assets/runtime DLLs, README, and manifest. |
-| Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample` packages `snake_sample.exe` with its config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
+| Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample` and `package_flappy_bird_sample` package sample executables with config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
 | Done | Rendering | Render sprites through OpenGL with texture resource reuse | Sprite components are the base render path for normal sprites, text, and tilemaps. |
 | Done | Prefabs and serialization | Save and load scenes and prefabs through JSON | Current JSON covers core transforms, sprites, animation, text, tilemaps, tags, prefabs, and resources. |
 | Done | Gameplay API | Add high-level helpers for sprites, text, colliders, prefabs, tags, and entity lookup | `Scene` now has creation and lookup helpers; `GameContext` can instantiate prefabs. |
@@ -59,7 +59,7 @@ Status values:
 | Planned | UI system | Add game UI primitives: font rendering, buttons, anchors/layout, menus, overlays | Current block text is useful only for simple HUDs. |
 | Done | Editor tools | Provide an ImGui editor shell and inspector for current components | Inspector can view/tune core components including sprite animation and tilemaps. |
 | Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
-| In Progress | Samples | Add complete Snake and Flappy Bird samples | Snake sample has started as `snake_sample`; Flappy Bird sample remains planned. |
+| Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
 | In Progress | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests now cover action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, config loading, resources, and scene JSON. Runtime mode and packaging coverage remain planned. |
 
@@ -80,11 +80,11 @@ Required:
 Required:
 
 - Done: `samples/snake` builds as a separate executable linked to `engine_core`.
+- Done: `samples/flappy_bird` builds as a separate executable linked to `engine_core`.
 - Done: reusable `engine_core` static library exists.
 - Done: game entry points can implement `IGame` and pass the game object into `Engine`.
 - Done: baseline package script can produce a demo distribution folder and zip.
 - Done: packaging can target one selected sample.
-- Planned: `samples/flappy_bird` builds as a separate executable linked to `engine_core`.
 - Planned: reusable `templates/basic_game` exists.
 
 ## Milestone 3: Developer Can Author Gameplay Efficiently
@@ -102,4 +102,4 @@ Required:
 - Done: action pressed/released input events.
 - Done: scene reload/change APIs.
 - Done: Snake sample uses grid helpers.
-- Planned: Flappy Bird sample uses runtime scene/prefab helpers.
+- Done: Flappy Bird sample uses runtime scene/prefab helpers.

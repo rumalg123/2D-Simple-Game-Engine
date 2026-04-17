@@ -33,6 +33,13 @@ cmake --build build --target snake_sample
 .\build\snake_sample.exe --config .\samples\snake\snake.game.json
 ```
 
+Build the separate Flappy Bird sample game:
+
+```powershell
+cmake --build build --target flappy_bird_sample
+.\build\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
+```
+
 ## Tests
 
 Run the core regression tests with CTest:
@@ -69,6 +76,12 @@ Package the Snake sample as its own runtime game:
 
 ```powershell
 cmake --build build --target package_snake_sample
+```
+
+Package the Flappy Bird sample as its own runtime game:
+
+```powershell
+cmake --build build --target package_flappy_bird_sample
 ```
 
 Or call the package script directly for a selected executable:

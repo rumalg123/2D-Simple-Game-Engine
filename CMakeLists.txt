@@ -84,6 +84,12 @@ add_executable(snake_sample
 
 target_link_libraries(snake_sample PRIVATE engine_core)
 
+add_executable(flappy_bird_sample
+    samples/flappy_bird/src/FlappyBirdGame.cpp
+)
+
+target_link_libraries(flappy_bird_sample PRIVATE engine_core)
+
 add_custom_command(TARGET engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
@@ -122,5 +128,23 @@ add_custom_target(package_snake_sample
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     DEPENDS snake_sample
     COMMENT "Packaging Snake sample executable, config, runtime DLLs, and assets"
+    VERBATIM
+)
+
+add_custom_target(package_flappy_bird_sample
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tools/package.ps1
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_SOURCE_DIR}/dist
+        -PackageName FlappyBirdSample
+        -ExecutableName flappy_bird_sample.exe
+        -GameConfig ${CMAKE_SOURCE_DIR}/samples/flappy_bird/flappy_bird.game.json
+        -AssetsPath ${CMAKE_SOURCE_DIR}/samples/flappy_bird/assets
+        -ReadmePath ${CMAKE_SOURCE_DIR}/samples/flappy_bird/README.md
+        -AllowMissingAssets
+        -SkipBuild
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS flappy_bird_sample
+    COMMENT "Packaging Flappy Bird sample executable, config, runtime DLLs, and assets"
     VERBATIM
 )
