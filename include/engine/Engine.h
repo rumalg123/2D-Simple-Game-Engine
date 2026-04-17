@@ -55,7 +55,6 @@ private:
     bool hotReloadEnabled = true;
     bool gizmoDragging = false;
     bool imguiInitialized = false;
-    bool resetActionWasDown = false;
     int connectedGamepadCount = 0;
     std::string activeGamepadName;
     std::size_t nextRenderFrame = 1;
@@ -65,6 +64,9 @@ private:
     GameContext makeGameContext();
     PluginContext makePluginContext();
     void notifyGameSceneLoaded();
+    void dispatchGameEvent(const Event& event);
+    void dispatchInputActionEvents();
+    bool loadSceneFromPath(const std::string& scenePath);
     void initScene();
     void initInputMap();
     void initScripts();

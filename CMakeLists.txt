@@ -17,6 +17,7 @@ add_library(engine_core STATIC
     src/Scene.cpp
     src/PhysicsSystem.cpp
     src/Memory.cpp
+    src/Game.cpp
     src/GameConfig.cpp
     src/JobSystem.cpp
     src/GpuResourceManager.cpp

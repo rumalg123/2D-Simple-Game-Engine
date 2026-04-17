@@ -279,7 +279,8 @@ bool loadGameConfigFromFile(const std::string& path, GameConfig& config, std::st
     buffer << input.rdbuf();
 
     std::unordered_map<std::string, ConfigValue> values;
-    FlatJsonConfigParser parser(buffer.str());
+    const std::string contents = buffer.str();
+    FlatJsonConfigParser parser(contents);
     if (!parser.parse(values, error)) {
         error = path + ": " + error;
         return false;
@@ -328,4 +329,3 @@ bool loadGameConfigFromFile(const std::string& path, GameConfig& config, std::st
     config = parsed;
     return true;
 }
-

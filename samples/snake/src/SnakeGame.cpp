@@ -1,6 +1,8 @@
 #include "Engine.h"
+#include "Event.h"
 #include "Game.h"
 #include "GameConfig.h"
+#include "Grid.h"
 #include "InputMap.h"
 #include "ResourceManager.h"
 #include "Scene.h"
@@ -20,22 +22,7 @@ constexpr int GridColumns = 20;
 constexpr int GridRows = 15;
 constexpr float CellSize = 0.08f;
 constexpr float StepSeconds = 0.12f;
-
-struct GridCell {
-    int x = 0;
-    int y = 0;
-};
-
-bool operator==(const GridCell& first, const GridCell& second) {
-    return first.x == second.x && first.y == second.y;
-}
-
-TransformComponent gridToWorld(GridCell cell) {
-    return {
-        (static_cast<float>(cell.x) - static_cast<float>(GridColumns) * 0.5f + 0.5f) * CellSize,
-        (static_cast<float>(GridRows) * 0.5f - static_cast<float>(cell.y) - 0.5f) * CellSize
-    };
-}
+const GridLayout SnakeGrid{GridColumns, GridRows, CellSize, CellSize, {0.0f, 0.0f}, true};
 
 bool containsCell(const std::vector<GridCell>& cells, GridCell target) {
     return std::find(cells.begin(), cells.end(), target) != cells.end();
@@ -48,11 +35,11 @@ Entity createSpriteEntity(
     float halfSize,
     const char* tag,
     int layer) {
-    const Entity entity = scene.createEntity();
-    scene.setTransform(entity, gridToWorld(cell));
-    scene.setSprite(entity, {halfSize, halfSize, 1.0f, 1.0f, 1.0f, 1.0f, layer, texture});
-    scene.setTag(entity, {tag});
-    return entity;
+    return scene.createSprite(
+        tag,
+        gridToWorld(SnakeGrid, cell),
+        {halfSize, halfSize, 1.0f, 1.0f, 1.0f, 1.0f, layer, texture},
+        tag);
 }
 
 class SnakeGame final : public IGame {
@@ -97,11 +84,10 @@ public:
     }
 
     void onFixedUpdate(GameContext& context, float deltaTime) override {
-        if (!context.scene || !context.inputMap || gameOver) {
+        if (!context.scene || gameOver) {
             return;
         }
 
-        readDirection(*context.inputMap);
         elapsed += deltaTime;
         if (elapsed < StepSeconds) {
             return;
@@ -110,6 +96,22 @@ public:
         elapsed -= StepSeconds;
         direction = requestedDirection;
         step(*context.scene);
+    }
+
+    void onEvent(GameContext&, const Event& event) override {
+        if (event.type != EventType::ActionChanged || !event.action.pressed) {
+            return;
+        }
+
+        if (event.action.actionName == "SnakeLeft") {
+            requestDirection({-1, 0});
+        } else if (event.action.actionName == "SnakeRight") {
+            requestDirection({1, 0});
+        } else if (event.action.actionName == "SnakeUp") {
+            requestDirection({0, -1});
+        } else if (event.action.actionName == "SnakeDown") {
+            requestDirection({0, 1});
+        }
     }
 
     std::vector<GameDebugStat> debugStats() const override {
@@ -153,18 +155,7 @@ private:
         createHud(scene);
     }
 
-    void readDirection(const InputMap& input) {
-        GridCell next = requestedDirection;
-        if (input.isDown("SnakeLeft")) {
-            next = {-1, 0};
-        } else if (input.isDown("SnakeRight")) {
-            next = {1, 0};
-        } else if (input.isDown("SnakeUp")) {
-            next = {0, -1};
-        } else if (input.isDown("SnakeDown")) {
-            next = {0, 1};
-        }
-
+    void requestDirection(GridCell next) {
         if (next.x + direction.x == 0 && next.y + direction.y == 0) {
             return;
         }
@@ -176,8 +167,7 @@ private:
         const GridCell nextHead{snake.front().x + direction.x, snake.front().y + direction.y};
         const bool willGrow = nextHead == food;
         const bool movingIntoReleasedTail = !willGrow && !snake.empty() && nextHead == snake.back();
-        if (nextHead.x < 0 || nextHead.x >= GridColumns || nextHead.y < 0 || nextHead.y >= GridRows ||
-            (containsCell(snake, nextHead) && !movingIntoReleasedTail)) {
+        if (!gridContains(SnakeGrid, nextHead) || (containsCell(snake, nextHead) && !movingIntoReleasedTail)) {
             endGame(scene);
             return;
         }
@@ -214,7 +204,7 @@ private:
         const int start = (score * 7 + static_cast<int>(snake.size()) * 3) % (GridColumns * GridRows);
         for (int offset = 0; offset < GridColumns * GridRows; ++offset) {
             const int value = (start + offset) % (GridColumns * GridRows);
-            const GridCell candidate{value % GridColumns, value / GridColumns};
+            const GridCell candidate = gridFromIndex(value, GridColumns);
             if (!containsCell(snake, candidate)) {
                 food = candidate;
                 foodEntity = createSpriteEntity(scene, food, foodTexture, CellSize * 0.38f, "Food", 8);

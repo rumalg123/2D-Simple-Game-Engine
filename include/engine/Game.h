@@ -1,5 +1,8 @@
 #pragma once
 
+#include "ECS.h"
+
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -20,6 +23,15 @@ struct GameContext {
     InputMap* inputMap = nullptr;
     AudioSystem* audio = nullptr;
     std::string* editorStatus = nullptr;
+    std::function<void()> reloadSceneRequest;
+    std::function<void()> clearSceneRequest;
+    std::function<bool(const std::string&)> loadSceneRequest;
+
+    void reloadScene() const;
+    void clearScene() const;
+    bool loadScene(const std::string& path) const;
+    Entity instantiatePrefab(const std::string& prefabName) const;
+    Entity instantiatePrefab(const std::string& prefabName, TransformComponent transformOverride) const;
 };
 
 struct GameDebugStat {

@@ -1,5 +1,8 @@
 #include "GameConfig.h"
+#include "Game.h"
+#include "Grid.h"
 #include "InputMap.h"
+#include "Prefab.h"
 #include "ResourceManager.h"
 #include "Scene.h"
 #include "SceneSerializer.h"
@@ -97,6 +100,41 @@ void testInputMapSupportsKeyboardAndGamepadBindings() {
     expect(moveLeft.gamepadAxes.size() == 1, "MoveLeft should store one gamepad axis binding.");
 }
 
+void testInputMapPublishesActionChanges() {
+    InputMap input;
+    input.bindAction("Jump", 32);
+    input.bindGamepadButton("Dash", 0);
+    input.bindGamepadButton("Dash", 1);
+
+    input.handleKeyChanged(32, true);
+    std::vector<InputActionChange> changes = input.consumeActionChanges();
+    expect(changes.size() == 1, "Keyboard press should publish one action change.");
+    expect(changes[0].actionName == "Jump" && changes[0].pressed, "Keyboard press should publish Jump pressed.");
+    expect(input.consumeActionChanges().empty(), "Consuming action changes should clear them.");
+
+    input.handleKeyChanged(32, true);
+    expect(input.consumeActionChanges().empty(), "Repeated key state should not publish duplicate action changes.");
+
+    input.handleKeyChanged(32, false);
+    changes = input.consumeActionChanges();
+    expect(changes.size() == 1, "Keyboard release should publish one action change.");
+    expect(changes[0].actionName == "Jump" && !changes[0].pressed, "Keyboard release should publish Jump released.");
+
+    input.replaceGamepadState({true, false}, {});
+    changes = input.consumeActionChanges();
+    expect(changes.size() == 1, "Gamepad button press should publish one action change.");
+    expect(changes[0].actionName == "Dash" && changes[0].pressed, "Gamepad button press should publish Dash pressed.");
+
+    input.replaceGamepadState({false, true}, {});
+    expect(input.isDown("Dash"), "Dash should stay down when another bound button takes over.");
+    expect(input.consumeActionChanges().empty(), "Replacing one held binding with another should not publish a false release.");
+
+    input.replaceGamepadState({false, false}, {});
+    changes = input.consumeActionChanges();
+    expect(changes.size() == 1, "Gamepad release should publish one action change.");
+    expect(changes[0].actionName == "Dash" && !changes[0].pressed, "Gamepad release should publish Dash released.");
+}
+
 void testResourceManagerReusesNamedTextures() {
     ResourceManager resources;
     const TextureHandle first = resources.createSolidColorTexture("white", 255, 255, 255, 255);
@@ -131,7 +169,10 @@ void testGameConfigLoadsFlatJsonAndKeepsDefaults() {
     config.prefabDirectory = "custom_prefabs";
     std::string error;
     const bool loaded = loadGameConfigFromFile(configPath.string(), config, error);
-    expect(loaded, "Loading game config failed: " + error);
+    if (!loaded) {
+        temp.preserveOnFailure();
+        throw std::runtime_error("Loading game config failed: " + error);
+    }
 
     expect(config.windowTitle == "Snake", "Config should load the window title.");
     expect(config.windowWidth == 960, "Config should load the window width.");
@@ -157,6 +198,108 @@ void testGameConfigRejectsInvalidWindowSize() {
     std::string error;
     expect(!loadGameConfigFromFile(configPath.string(), config, error), "Invalid window size should fail.");
     expect(error.find("windowWidth") != std::string::npos, "Invalid window size should report the window keys.");
+}
+
+void testSceneGameplayHelpersFindEntities() {
+    Scene scene;
+
+    const Entity player = scene.createSprite(
+        "Player",
+        {1.0f, 2.0f},
+        {0.25f, 0.5f, 1.0f, 0.8f, 0.6f, 1.0f, 10, InvalidTexture},
+        "Actor");
+    const Entity hud = scene.createText(
+        "Score",
+        {-0.9f, 0.8f},
+        {"SCORE 0"},
+        "UI");
+    const Entity wall = scene.createCollider(
+        "Wall",
+        {0.0f, 0.0f},
+        {0.5f, 0.5f, true},
+        "Solid");
+
+    expect(scene.findEntityByName("Player") == player, "Scene should find entities by name.");
+    expect(scene.findEntityByTag("UI") == hud, "Scene should find the first entity with a tag.");
+    expect(scene.findEntityByName("Wall") == wall, "Collider helper should name the entity.");
+    expect(scene.getSprite(player) != nullptr, "Sprite helper should add a sprite component.");
+    expect(scene.getText(hud) != nullptr, "Text helper should add a text component.");
+    expect(scene.getCollider(wall) != nullptr, "Collider helper should add a collider component.");
+
+    std::vector<Entity> actors = scene.findEntitiesByTag("Actor");
+    expect(actors.size() == 1 && actors[0] == player, "Scene should collect all entities with a tag.");
+
+    scene.destroyEntity(player);
+    expect(scene.findEntityByName("Player") == InvalidEntity, "Destroyed entities should not be returned by name lookup.");
+    expect(scene.findEntityByTag("Actor") == InvalidEntity, "Destroyed entities should not be returned by tag lookup.");
+}
+
+void testGameContextInstantiatesPrefabs() {
+    Scene scene;
+    PrefabRegistry prefabs;
+    Prefab prefab;
+    prefab.name = "Crate";
+    prefab.transform = TransformComponent{0.25f, -0.25f};
+    prefab.sprite = SpriteComponent{0.1f, 0.1f, 0.7f, 0.5f, 0.3f, 1.0f, 4, InvalidTexture};
+    prefabs.registerPrefab(prefab);
+
+    GameContext context;
+    context.scene = &scene;
+    context.prefabs = &prefabs;
+
+    const Entity entity = context.instantiatePrefab("Crate");
+    expect(entity != InvalidEntity, "GameContext should instantiate registered prefabs.");
+    expect(scene.getName(entity) && scene.getName(entity)->name == "Crate", "Instantiated prefab should keep its name.");
+    expect(scene.getSprite(entity) != nullptr, "Instantiated prefab should copy sprite components.");
+
+    const Entity moved = context.instantiatePrefab("Crate", {1.0f, 2.0f});
+    const TransformComponent* transform = scene.getTransform(moved);
+    expect(transform != nullptr, "Prefab transform override should create a transform.");
+    expectNear(transform->x, 1.0f, "Prefab transform override should set x.");
+    expectNear(transform->y, 2.0f, "Prefab transform override should set y.");
+    expect(context.instantiatePrefab("Missing") == InvalidEntity, "Missing prefabs should return InvalidEntity.");
+}
+
+void testGameContextSceneRequests() {
+    GameContext context;
+    bool reloaded = false;
+    bool cleared = false;
+    std::string loadedPath;
+
+    context.reloadSceneRequest = [&reloaded]() {
+        reloaded = true;
+    };
+    context.clearSceneRequest = [&cleared]() {
+        cleared = true;
+    };
+    context.loadSceneRequest = [&loadedPath](const std::string& path) {
+        loadedPath = path;
+        return path == "levels/one.scene.json";
+    };
+
+    context.reloadScene();
+    context.clearScene();
+    const bool loaded = context.loadScene("levels/one.scene.json");
+
+    expect(reloaded, "GameContext should forward scene reload requests.");
+    expect(cleared, "GameContext should forward clear scene requests.");
+    expect(loaded, "GameContext should forward load scene requests.");
+    expect(loadedPath == "levels/one.scene.json", "GameContext should pass the requested scene path.");
+}
+
+void testGridHelpersConvertCells() {
+    const GridLayout layout{10, 5, 2.0f, 4.0f, {0.0f, 0.0f}, true};
+
+    expect(gridCellCount(layout) == 50, "Grid cell count should use columns times rows.");
+    expect(gridContains(layout, {0, 0}), "Grid should contain its top-left cell.");
+    expect(!gridContains(layout, {-1, 0}), "Grid should reject negative columns.");
+    expect(!gridContains(layout, {10, 0}), "Grid should reject columns past the width.");
+    expect(gridToIndex({3, 2}, layout.columns) == 23, "Grid index should be row-major.");
+    expect(gridFromIndex(23, layout.columns) == GridCell{3, 2}, "Grid index conversion should round-trip.");
+
+    const TransformComponent world = gridToWorld(layout, {0, 0});
+    expectNear(world.x, -9.0f, "Grid world x should center cells around the layout center.");
+    expectNear(world.y, 8.0f, "Y-down grid world y should put row zero at the top.");
 }
 
 void testSceneJsonRoundTripsTextAndTilemaps() {
@@ -247,9 +390,14 @@ void runTest(const char* name, void (*test)()) {
 int main() {
     try {
         runTest("InputMap keyboard and gamepad bindings", testInputMapSupportsKeyboardAndGamepadBindings);
+        runTest("InputMap action changes", testInputMapPublishesActionChanges);
         runTest("ResourceManager named texture reuse", testResourceManagerReusesNamedTextures);
         runTest("GameConfig flat JSON loading", testGameConfigLoadsFlatJsonAndKeepsDefaults);
         runTest("GameConfig invalid window size rejection", testGameConfigRejectsInvalidWindowSize);
+        runTest("Scene gameplay helpers", testSceneGameplayHelpersFindEntities);
+        runTest("GameContext prefab helpers", testGameContextInstantiatesPrefabs);
+        runTest("GameContext scene requests", testGameContextSceneRequests);
+        runTest("Grid helpers", testGridHelpersConvertCells);
         runTest("Scene JSON text and tilemap round-trip", testSceneJsonRoundTripsTextAndTilemaps);
     } catch (const std::exception& exception) {
         std::cerr << "[FAIL] " << exception.what() << '\n';

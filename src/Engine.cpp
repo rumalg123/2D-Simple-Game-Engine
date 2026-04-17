@@ -348,7 +348,24 @@ void Engine::onKeyChanged(int key, int action) {
 }
 
 GameContext Engine::makeGameContext() {
-    return {&scene, &resources, &prefabs, &scriptSystem, &inputMap, &audioSystem, &editorStatus};
+    GameContext context;
+    context.scene = &scene;
+    context.resources = &resources;
+    context.prefabs = &prefabs;
+    context.scripts = &scriptSystem;
+    context.inputMap = &inputMap;
+    context.audio = &audioSystem;
+    context.editorStatus = &editorStatus;
+    context.reloadSceneRequest = [this]() {
+        initScene();
+    };
+    context.clearSceneRequest = [this]() {
+        newEmptyScene();
+    };
+    context.loadSceneRequest = [this](const std::string& scenePath) {
+        return loadSceneFromPath(scenePath);
+    };
+    return context;
 }
 
 PluginContext Engine::makePluginContext() {
@@ -362,6 +379,29 @@ void Engine::notifyGameSceneLoaded() {
 
     GameContext gameContext = makeGameContext();
     game->onSceneLoaded(gameContext);
+}
+
+void Engine::dispatchGameEvent(const Event& event) {
+    if (!game) {
+        return;
+    }
+
+    GameContext gameContext = makeGameContext();
+    game->onEvent(gameContext, event);
+}
+
+void Engine::dispatchInputActionEvents() {
+    for (const InputActionChange& change : inputMap.consumeActionChanges()) {
+        Event event;
+        event.type = EventType::ActionChanged;
+        event.action = {change.actionName, change.pressed};
+
+        if (change.actionName == "ResetScene" && change.pressed) {
+            initScene();
+        }
+
+        dispatchGameEvent(event);
+    }
 }
 
 void Engine::initScene() {
@@ -386,7 +426,6 @@ void Engine::initScene() {
 
 void Engine::initInputMap() {
     inputMap.clear();
-    resetActionWasDown = false;
     if (game) {
         GameContext gameContext = makeGameContext();
         game->configureInput(gameContext);
@@ -1236,13 +1275,11 @@ void Engine::saveCurrentScene() {
     }
 }
 
-void Engine::loadSavedScene() {
-    const std::string scenePath = (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string();
-
+bool Engine::loadSceneFromPath(const std::string& scenePath) {
     std::string error;
     if (!loadSceneFromJson(scene, resources, scenePath, error)) {
         editorStatus = error;
-        return;
+        return false;
     }
 
     syncGpuTextures(false);
@@ -1250,6 +1287,12 @@ void Engine::loadSavedScene() {
     notifyGameSceneLoaded();
     cameraSystem();
     editorStatus = "Loaded scene from " + scenePath;
+    return true;
+}
+
+void Engine::loadSavedScene() {
+    const std::string scenePath = (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string();
+    loadSceneFromPath(scenePath);
 }
 
 void Engine::saveSelectedPrefab() {
@@ -1398,23 +1441,20 @@ void Engine::eventSystem() {
 
             if (!keyboardCaptured || !event.key.pressed) {
                 inputMap.handleKeyChanged(event.key.key, event.key.pressed);
+                dispatchInputActionEvents();
             }
         }
 
-        if (game) {
-            GameContext gameContext = makeGameContext();
-            game->onEvent(gameContext, event);
-        }
+        dispatchGameEvent(event);
     }
 }
 
 void Engine::updateGamepadInput() {
-    inputMap.clearGamepadState();
     connectedGamepadCount = 0;
     activeGamepadName.clear();
 
-    std::array<bool, GLFW_GAMEPAD_BUTTON_LAST + 1> buttonStates{};
-    std::array<float, GLFW_GAMEPAD_AXIS_LAST + 1> axisValues{};
+    std::vector<bool> buttonStates(GLFW_GAMEPAD_BUTTON_LAST + 1, false);
+    std::vector<float> axisValues(GLFW_GAMEPAD_AXIS_LAST + 1, 0.0f);
 
     for (int joystick = GLFW_JOYSTICK_1; joystick <= GLFW_JOYSTICK_LAST; ++joystick) {
         if (!glfwJoystickIsGamepad(joystick)) {
@@ -1445,20 +1485,8 @@ void Engine::updateGamepadInput() {
         }
     }
 
-    for (int button = 0; button <= GLFW_GAMEPAD_BUTTON_LAST; ++button) {
-        inputMap.setGamepadButtonState(button, buttonStates[static_cast<std::size_t>(button)]);
-    }
-
-    for (int axis = 0; axis <= GLFW_GAMEPAD_AXIS_LAST; ++axis) {
-        inputMap.setGamepadAxisValue(axis, axisValues[static_cast<std::size_t>(axis)]);
-    }
-
-    const bool resetDown = inputMap.isDown("ResetScene");
-    const bool keyboardCaptured = imguiInitialized && ImGui::GetIO().WantCaptureKeyboard;
-    if (resetDown && !resetActionWasDown && !keyboardCaptured) {
-        initScene();
-    }
-    resetActionWasDown = resetDown;
+    inputMap.replaceGamepadState(buttonStates, axisValues);
+    dispatchInputActionEvents();
 }
 
 void Engine::inputSystem() {

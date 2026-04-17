@@ -2,12 +2,14 @@
 
 #include <algorithm>
 #include <cmath>
+#include <utility>
 
 void InputMap::clear() {
     actions.clear();
     keyStates.clear();
     gamepadButtonStates.clear();
     gamepadAxisValues.clear();
+    actionChanges.clear();
 }
 
 void InputMap::bindAction(const std::string& actionName, int key) {
@@ -72,6 +74,21 @@ void InputMap::setGamepadAxisValue(int axis, float value) {
     refreshActionStates();
 }
 
+void InputMap::replaceGamepadState(const std::vector<bool>& buttonStates, const std::vector<float>& axisValues) {
+    gamepadButtonStates.clear();
+    gamepadAxisValues.clear();
+
+    for (std::size_t button = 0; button < buttonStates.size(); ++button) {
+        gamepadButtonStates[static_cast<int>(button)] = buttonStates[button];
+    }
+
+    for (std::size_t axis = 0; axis < axisValues.size(); ++axis) {
+        gamepadAxisValues[static_cast<int>(axis)] = axisValues[axis];
+    }
+
+    refreshActionStates();
+}
+
 bool InputMap::isDown(const std::string& actionName) const {
     const auto action = actions.find(actionName);
     return action != actions.end() && evaluateActionDown(action->second);
@@ -93,6 +110,12 @@ float InputMap::getAxis(const std::string& negativeAction, const std::string& po
     }
 
     return value;
+}
+
+std::vector<InputActionChange> InputMap::consumeActionChanges() {
+    std::vector<InputActionChange> changes = std::move(actionChanges);
+    actionChanges.clear();
+    return changes;
 }
 
 const std::unordered_map<std::string, InputAction>& InputMap::getActions() const {
@@ -142,6 +165,11 @@ bool InputMap::evaluateActionDown(const InputAction& action) const {
 
 void InputMap::refreshActionStates() {
     for (auto& action : actions) {
-        action.second.down = evaluateActionDown(action.second);
+        const bool wasDown = action.second.down;
+        const bool isNowDown = evaluateActionDown(action.second);
+        action.second.down = isNowDown;
+        if (wasDown != isNowDown) {
+            actionChanges.push_back({action.second.name, isNowDown});
+        }
     }
 }

@@ -9,11 +9,30 @@ class Scene {
 public:
     void clear();
     Entity createEntity();
+    Entity createEntity(std::string name, TransformComponent transform = {0.0f, 0.0f});
+    Entity createSprite(
+        std::string name,
+        TransformComponent transform,
+        SpriteComponent sprite,
+        std::string tag = {});
+    Entity createText(
+        std::string name,
+        TransformComponent transform,
+        TextComponent text,
+        std::string tag = {});
+    Entity createCollider(
+        std::string name,
+        TransformComponent transform,
+        ColliderComponent collider,
+        std::string tag = {});
     void destroyEntity(Entity entity);
 
     Entity entityCount() const;
     Entity livingEntityCount() const;
     bool isValidEntity(Entity entity) const;
+    Entity findEntityByName(const std::string& name) const;
+    Entity findEntityByTag(const std::string& tag) const;
+    std::vector<Entity> findEntitiesByTag(const std::string& tag) const;
 
     void setName(Entity entity, NameComponent name);
     void setTag(Entity entity, TagComponent tag);

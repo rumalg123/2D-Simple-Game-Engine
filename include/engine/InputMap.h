@@ -23,6 +23,11 @@ struct InputAction {
     bool down = false;
 };
 
+struct InputActionChange {
+    std::string actionName;
+    bool pressed = false;
+};
+
 class InputMap {
 public:
     void clear();
@@ -38,9 +43,11 @@ public:
     void clearGamepadState();
     void setGamepadButtonState(int button, bool pressed);
     void setGamepadAxisValue(int axis, float value);
+    void replaceGamepadState(const std::vector<bool>& buttonStates, const std::vector<float>& axisValues);
     bool isDown(const std::string& actionName) const;
     bool isBoundToKey(const std::string& actionName, int key) const;
     float getAxis(const std::string& negativeAction, const std::string& positiveAction) const;
+    std::vector<InputActionChange> consumeActionChanges();
     const std::unordered_map<std::string, InputAction>& getActions() const;
 
 private:
@@ -52,4 +59,5 @@ private:
     std::unordered_map<int, bool> keyStates;
     std::unordered_map<int, bool> gamepadButtonStates;
     std::unordered_map<int, float> gamepadAxisValues;
+    std::vector<InputActionChange> actionChanges;
 };

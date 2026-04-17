@@ -30,6 +30,52 @@ Entity Scene::createEntity() {
     return entity;
 }
 
+Entity Scene::createEntity(std::string name, TransformComponent transform) {
+    const Entity entity = createEntity();
+    setName(entity, {std::move(name)});
+    setTransform(entity, transform);
+    return entity;
+}
+
+Entity Scene::createSprite(
+    std::string name,
+    TransformComponent transform,
+    SpriteComponent sprite,
+    std::string tag) {
+    const Entity entity = createEntity(std::move(name), transform);
+    setSprite(entity, sprite);
+    if (!tag.empty()) {
+        setTag(entity, {std::move(tag)});
+    }
+    return entity;
+}
+
+Entity Scene::createText(
+    std::string name,
+    TransformComponent transform,
+    TextComponent text,
+    std::string tag) {
+    const Entity entity = createEntity(std::move(name), transform);
+    setText(entity, std::move(text));
+    if (!tag.empty()) {
+        setTag(entity, {std::move(tag)});
+    }
+    return entity;
+}
+
+Entity Scene::createCollider(
+    std::string name,
+    TransformComponent transform,
+    ColliderComponent collider,
+    std::string tag) {
+    const Entity entity = createEntity(std::move(name), transform);
+    setCollider(entity, collider);
+    if (!tag.empty()) {
+        setTag(entity, {std::move(tag)});
+    }
+    return entity;
+}
+
 void Scene::destroyEntity(Entity entity) {
     if (!isValidEntity(entity)) {
         return;
@@ -75,6 +121,40 @@ Entity Scene::livingEntityCount() const {
 
 bool Scene::isValidEntity(Entity entity) const {
     return entity < alive.size() && alive[entity];
+}
+
+Entity Scene::findEntityByName(const std::string& name) const {
+    for (std::size_t index = 0; index < names.size(); ++index) {
+        const Entity entity = names.entityAt(index);
+        if (isValidEntity(entity) && names.componentAt(index).name == name) {
+            return entity;
+        }
+    }
+
+    return InvalidEntity;
+}
+
+Entity Scene::findEntityByTag(const std::string& tag) const {
+    for (std::size_t index = 0; index < tags.size(); ++index) {
+        const Entity entity = tags.entityAt(index);
+        if (isValidEntity(entity) && tags.componentAt(index).tag == tag) {
+            return entity;
+        }
+    }
+
+    return InvalidEntity;
+}
+
+std::vector<Entity> Scene::findEntitiesByTag(const std::string& tag) const {
+    std::vector<Entity> entities;
+    for (std::size_t index = 0; index < tags.size(); ++index) {
+        const Entity entity = tags.entityAt(index);
+        if (isValidEntity(entity) && tags.componentAt(index).tag == tag) {
+            entities.push_back(entity);
+        }
+    }
+
+    return entities;
 }
 
 void Scene::setName(Entity entity, NameComponent name) {
