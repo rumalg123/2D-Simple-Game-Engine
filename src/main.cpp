@@ -1,5 +1,5 @@
+#include "App.h"
 #include "DemoGame.h"
-#include "Engine.h"
 #include "GameConfig.h"
 
 #include <iostream>
@@ -39,13 +39,5 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Engine engine(createDemoGame(), config);
-
-    if (!engine.init())
-        return -1;
-
-    engine.run();
-    engine.cleanup();
-
-    return 0;
+    return runGameApp(createDemoGame(), config);
 }

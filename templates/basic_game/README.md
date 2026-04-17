@@ -2,6 +2,7 @@
 
 This is a minimal starting point for a new runtime game linked against `engine_core`. It demonstrates:
 
+- `RuntimeApp` / `EditorApp` selection through `runGameApp`.
 - `IGame` setup and command-line config loading.
 - Named keyboard and gamepad input actions.
 - Scene helper APIs for sprites and text.
@@ -42,4 +43,3 @@ Controls:
 - `Space`, `Enter`, or gamepad A: confirm.
 - `R`: reset scene.
 - `Esc`: exit.
-

@@ -10,9 +10,9 @@ Status values:
 
 ## Current Focus
 
-1. Dedicated editor/runtime app split.
-2. Runtime and packaging regression coverage.
-3. Script lifecycle expansion.
+1. Runtime and packaging regression coverage.
+2. Script lifecycle expansion.
+3. Asset manifest and import workflow.
 
 ## Implemented Surface
 
@@ -23,6 +23,7 @@ Status values:
 - Action changed events for named input actions.
 - Game-facing scene reload, clear, and load-from-file requests through `GameContext`.
 - Game-facing helpers for entity lookup, sprite/text/collider creation, prefab instantiation, and grid-to-world conversion.
+- Dedicated `RuntimeApp` and `EditorApp` wrappers with `runGameApp()` selection from config.
 - Basic event dispatch for key changes, collisions, and triggers through `IGame::onEvent`.
 - Sprite animation components using grid-based sprite sheets and UV frame selection.
 - Tilemap components rendered through the sprite path with scene/prefab JSON persistence.
@@ -36,11 +37,11 @@ Status values:
 | Status | Area | Requirement | Notes |
 | --- | --- | --- | --- |
 | Done | Source of truth | Keep this file as the canonical roadmap | Update status here as features are implemented. |
-| Done | Core architecture | Split reusable engine code into `engine_core` | Demo, tests, and `snake_sample` all link against the static library. |
+| Done | Core architecture | Split reusable engine code into `engine_core` | Demo, tests, samples, and template all link against the static library. |
 | Done | Game hook API | Add an `IGame` and `GameContext` entry point for game code | Hooks cover input setup, script registration, scene loading, plugins, fixed update, events, and debug stats. |
 | Done | Game project workflow | Add a project template and sample game project layout | `samples/snake`, `samples/flappy_bird`, and `templates/basic_game` build as separate executables linked against `engine_core`. |
 | Done | Runtime configuration | Add per-game config for title, resolution, editor/runtime mode, asset paths, hot reload, and vsync | Implemented with `GameConfig`, flat JSON loading, and `demo.game.json`. |
-| In Progress | Runtime/editor split | Allow packaged games to run without editor panels | Basic runtime mode skips ImGui/editor UI and still runs rendering, input, audio, scripts, and physics. Dedicated `EditorApp`/`RuntimeApp` split is still planned. |
+| Done | Runtime/editor split | Allow packaged games to run without editor panels | `RuntimeApp` forces runtime mode, `EditorApp` forces editor mode, and `runGameApp()` selects between them from config. |
 | Done | Packaging | Add baseline package output for the demo executable | `tools/package.ps1` and `package_game` produce a folder, zip, launcher, config, copied assets/runtime DLLs, README, and manifest. |
 | Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample`, `package_flappy_bird_sample`, and `package_basic_game_template` package game executables with config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
 | Done | Rendering | Render sprites through OpenGL with texture resource reuse | Sprite components are the base render path for normal sprites, text, and tilemaps. |
@@ -73,6 +74,7 @@ Required:
 - Done: `Engine` accepts config through constructor.
 - Done: `--config`, `--runtime`, and `--editor` command-line options.
 - Done: runtime mode skips editor UI and ImGui setup.
+- Done: dedicated `RuntimeApp` and `EditorApp` wrappers exist.
 - Done: asset and prefab directories come from config.
 - Done: tests cover config defaults and config loading. Build passes; local execution is currently blocked by Windows Application Control.
 
@@ -83,7 +85,7 @@ Required:
 - Done: `samples/snake` builds as a separate executable linked to `engine_core`.
 - Done: `samples/flappy_bird` builds as a separate executable linked to `engine_core`.
 - Done: reusable `engine_core` static library exists.
-- Done: game entry points can implement `IGame` and pass the game object into `Engine`.
+- Done: game entry points can implement `IGame` and pass the game object into the app runner.
 - Done: baseline package script can produce a demo distribution folder and zip.
 - Done: packaging can target one selected sample.
 - Done: reusable `templates/basic_game` exists.

@@ -1,4 +1,4 @@
-#include "Engine.h"
+#include "App.h"
 #include "Event.h"
 #include "Game.h"
 #include "GameConfig.h"
@@ -244,12 +244,5 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    Engine engine(std::make_unique<BasicGame>(), config);
-    if (!engine.init()) {
-        return -1;
-    }
-
-    engine.run();
-    engine.cleanup();
-    return 0;
+    return runGameApp(std::make_unique<BasicGame>(), config);
 }

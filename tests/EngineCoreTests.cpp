@@ -1,3 +1,4 @@
+#include "App.h"
 #include "GameConfig.h"
 #include "Game.h"
 #include "Grid.h"
@@ -200,6 +201,22 @@ void testGameConfigRejectsInvalidWindowSize() {
     expect(error.find("windowWidth") != std::string::npos, "Invalid window size should report the window keys.");
 }
 
+void testAppModesNormalizeConfig() {
+    GameConfig runtimeInput;
+    runtimeInput.editorEnabled = true;
+    runtimeInput.startPlaying = false;
+    GameConfig runtimeConfig = RuntimeApp::makeRuntimeConfig(runtimeInput);
+    expect(!runtimeConfig.editorEnabled, "RuntimeApp config should disable editor UI.");
+    expect(runtimeConfig.startPlaying, "RuntimeApp config should start simulation playback.");
+
+    GameConfig editorInput;
+    editorInput.editorEnabled = false;
+    editorInput.startPlaying = false;
+    GameConfig editorConfig = EditorApp::makeEditorConfig(editorInput);
+    expect(editorConfig.editorEnabled, "EditorApp config should enable editor UI.");
+    expect(!editorConfig.startPlaying, "EditorApp config should preserve the requested play state.");
+}
+
 void testSceneGameplayHelpersFindEntities() {
     Scene scene;
 
@@ -394,6 +411,7 @@ int main() {
         runTest("ResourceManager named texture reuse", testResourceManagerReusesNamedTextures);
         runTest("GameConfig flat JSON loading", testGameConfigLoadsFlatJsonAndKeepsDefaults);
         runTest("GameConfig invalid window size rejection", testGameConfigRejectsInvalidWindowSize);
+        runTest("App mode config normalization", testAppModesNormalizeConfig);
         runTest("Scene gameplay helpers", testSceneGameplayHelpersFindEntities);
         runTest("GameContext prefab helpers", testGameContextInstantiatesPrefabs);
         runTest("GameContext scene requests", testGameContextSceneRequests);

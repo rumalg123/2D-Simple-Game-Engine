@@ -133,24 +133,20 @@ Use the hooks as follows:
 - `onEvent` handles collisions, triggers, and input events.
 - `debugStats` exposes small game stats in the editor panel.
 
-Then pass the game object into the engine:
+Then pass the game object into the app runner:
 
 ```cpp
-#include "Engine.h"
+#include "App.h"
 #include "MyGame.h"
 
 int main() {
-    Engine engine(createMyGame());
-
-    if (!engine.init()) {
-        return -1;
-    }
-
-    engine.run();
-    engine.cleanup();
-    return 0;
+    return runGameApp(createMyGame(), {});
 }
 ```
+
+Use `RuntimeApp` directly when an executable must always run without editor panels. Use `EditorApp`
+directly when an executable must always start with editor UI. `runGameApp()` chooses between them
+from `GameConfig::editorEnabled`.
 
 The current demo follows this pattern with `createDemoGame()`.
 
