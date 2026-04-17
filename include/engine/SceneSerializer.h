@@ -18,7 +18,8 @@ bool loadPrefabFromJson(
     PrefabRegistry& prefabs,
     ResourceManager& resources,
     const std::string& path,
-    std::string& error);
+    std::string& error,
+    std::string* loadedPrefabName = nullptr);
 bool loadPrefabDirectoryFromJson(
     PrefabRegistry& prefabs,
     ResourceManager& resources,

@@ -57,9 +57,9 @@ ctest --test-dir build --output-on-failure
 ```
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
-asset manifest scan/save/load, scene/gameplay helpers, script lifecycle callbacks, physics contact
-phases and filters, JSON round-tripping for text/tilemap/collider scene data, and a package smoke
-test for the basic game template.
+asset manifest scan/save/load, prefab asset load/spawn, scene/gameplay helpers, script lifecycle
+callbacks, physics contact phases and filters, JSON round-tripping for text/tilemap/collider scene
+data, and a package smoke test for the basic game template.
 
 ## Package
 
@@ -122,8 +122,9 @@ audio, font, scene, prefab, sprite-sheet metadata, and animation-clip metadata f
 duplicating existing paths. Texture and sprite-sheet assets can be assigned to the selected sprite
 by ID, so saved scenes reference a stable asset name instead of an incidental editor path.
 
-Game and plugin code can access the current manifest through `GameContext::assets` and
-`PluginContext::assets`.
+The editor asset browser can load scene assets, load prefab assets into the prefab registry, and
+spawn prefab assets into the current scene. Game and plugin code can access the current manifest
+through `GameContext::assets` and `PluginContext::assets`.
 
 ## Project Layout
 

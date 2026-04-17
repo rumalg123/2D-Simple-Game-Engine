@@ -217,6 +217,48 @@ void testAssetManifestScansImportsAndPersists() {
         "Loaded manifest should preserve sprite sheet metadata.");
 }
 
+void testPrefabAssetLoadReportsNameAndInstantiates() {
+    TempDirectory temp;
+    const std::filesystem::path assetRoot = temp.get() / "assets";
+    std::filesystem::create_directories(assetRoot / "prefabs");
+    const std::filesystem::path prefabPath = assetRoot / "prefabs" / "hero.prefab.json";
+
+    Scene sourceScene;
+    ResourceManager resources;
+    const Entity source = sourceScene.createEntity();
+    sourceScene.setName(source, {"Hero"});
+    sourceScene.setTransform(source, {1.25f, -0.75f});
+    sourceScene.setCollider(source, {0.30f, 0.40f, true, false, 2u, 4u});
+
+    std::string error;
+    expect(
+        saveEntityPrefabToJson(sourceScene, resources, source, prefabPath.string(), error),
+        "Saving prefab asset failed: " + error);
+
+    AssetManifest manifest;
+    AssetManifestEntry& entry = manifest.importAsset(assetRoot, prefabPath, AssetType::Prefab);
+    expect(entry.id == "prefab:prefabs/hero", "Prefab asset id should be stable and path-derived.");
+    expect(entry.type == AssetType::Prefab, "Explicit prefab import should preserve prefab type.");
+
+    PrefabRegistry prefabs;
+    std::string loadedName;
+    expect(
+        loadPrefabFromJson(prefabs, resources, prefabPath.string(), error, &loadedName),
+        "Loading prefab asset failed: " + error);
+    expect(loadedName == "Hero", "Prefab loader should report the registered prefab name.");
+    expect(prefabs.hasPrefab("Hero"), "Loaded prefab asset should be registered by name.");
+
+    Scene targetScene;
+    const Entity spawned = prefabs.instantiate(targetScene, loadedName, {0.0f, 0.0f});
+    const ColliderComponent* collider = targetScene.getCollider(spawned);
+    expect(collider != nullptr, "Spawned prefab should include its collider component.");
+    expect(collider->layer == 2u && collider->mask == 4u, "Spawned prefab should preserve collider filters.");
+    const TransformComponent* transform = targetScene.getTransform(spawned);
+    expect(transform != nullptr, "Spawned prefab should include a transform component.");
+    expectNear(transform->x, 0.0f, "Prefab spawn override should replace transform x.");
+    expectNear(transform->y, 0.0f, "Prefab spawn override should replace transform y.");
+}
+
 void testGameConfigLoadsFlatJsonAndKeepsDefaults() {
     TempDirectory temp;
     const std::filesystem::path configPath = temp.get() / "game.config.json";
@@ -650,6 +692,7 @@ int main() {
         runTest("InputMap action changes", testInputMapPublishesActionChanges);
         runTest("ResourceManager named texture reuse", testResourceManagerReusesNamedTextures);
         runTest("AssetManifest scan and persistence", testAssetManifestScansImportsAndPersists);
+        runTest("Prefab asset load and spawn", testPrefabAssetLoadReportsNameAndInstantiates);
         runTest("GameConfig flat JSON loading", testGameConfigLoadsFlatJsonAndKeepsDefaults);
         runTest("GameConfig invalid window size rejection", testGameConfigRejectsInvalidWindowSize);
         runTest("App mode config normalization", testAppModesNormalizeConfig);

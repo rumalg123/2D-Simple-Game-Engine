@@ -89,6 +89,8 @@ private:
     void saveCurrentScene();
     void loadSavedScene();
     void saveSelectedPrefab();
+    bool loadPrefabAssetFromPath(const std::string& path, std::string* loadedPrefabName = nullptr);
+    void spawnPrefabAssetFromPath(const std::string& path);
     void reloadPrefabAssets();
     void newEmptyScene();
     Entity createEmptyEntity();

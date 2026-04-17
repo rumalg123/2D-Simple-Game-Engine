@@ -1198,7 +1198,8 @@ bool loadPrefabFromJson(
     PrefabRegistry& prefabs,
     ResourceManager& resources,
     const std::string& path,
-    std::string& error) {
+    std::string& error,
+    std::string* loadedPrefabName) {
     JsonValue root;
     if (!parseJsonFile(path, root, error)) {
         return false;
@@ -1215,6 +1216,9 @@ bool loadPrefabFromJson(
         prefab.name = prefabNameFromPath(path);
     }
 
+    if (loadedPrefabName) {
+        *loadedPrefabName = prefab.name;
+    }
     prefabs.registerPrefab(std::move(prefab));
     return true;
 }

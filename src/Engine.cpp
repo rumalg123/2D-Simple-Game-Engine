@@ -1306,6 +1306,8 @@ void Engine::renderAssetBrowserPanel() {
             AssetManifest::assetTypeToString(entry.type));
         ImGui::TextDisabled("%s", entry.path.c_str());
 
+        const std::string assetPath = (assetRoot / entry.path).generic_string();
+
         if (entry.type == AssetType::Texture || entry.type == AssetType::SpriteSheet) {
             ImGui::SameLine();
             ImGui::PushID(entry.id.c_str());
@@ -1313,13 +1315,30 @@ void Engine::renderAssetBrowserPanel() {
                 selectedEntity != InvalidEntity ? scene.getSprite(selectedEntity) : nullptr;
             if (ImGui::Button("Use On Selected") && selectedSprite) {
                 try {
-                    const std::string texturePath = (assetRoot / entry.path).generic_string();
-                    selectedSprite->texture = resources.loadTextureFromFile(entry.id, texturePath);
+                    selectedSprite->texture = resources.loadTextureFromFile(entry.id, assetPath);
                     syncGpuTextures(false);
                     editorStatus = "Assigned texture asset: " + entry.id;
                 } catch (const std::exception& exception) {
                     editorStatus = exception.what();
                 }
+            }
+            ImGui::PopID();
+        } else if (entry.type == AssetType::Scene) {
+            ImGui::SameLine();
+            ImGui::PushID(entry.id.c_str());
+            if (ImGui::Button("Load Scene")) {
+                loadSceneFromPath(assetPath);
+            }
+            ImGui::PopID();
+        } else if (entry.type == AssetType::Prefab) {
+            ImGui::SameLine();
+            ImGui::PushID(entry.id.c_str());
+            if (ImGui::Button("Load Prefab")) {
+                loadPrefabAssetFromPath(assetPath);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Spawn")) {
+                spawnPrefabAssetFromPath(assetPath);
             }
             ImGui::PopID();
         }
@@ -1382,6 +1401,36 @@ void Engine::saveSelectedPrefab() {
         editorStatus = "Saved prefab to " + path;
     } else {
         editorStatus = error;
+    }
+}
+
+bool Engine::loadPrefabAssetFromPath(const std::string& path, std::string* loadedPrefabName) {
+    std::string error;
+    std::string prefabName;
+    if (!loadPrefabFromJson(prefabs, resources, path, error, &prefabName)) {
+        editorStatus = error;
+        return false;
+    }
+
+    syncGpuTextures(false);
+    if (loadedPrefabName) {
+        *loadedPrefabName = prefabName;
+    }
+    editorStatus = "Loaded prefab asset: " + prefabName;
+    return true;
+}
+
+void Engine::spawnPrefabAssetFromPath(const std::string& path) {
+    std::string prefabName;
+    if (!loadPrefabAssetFromPath(path, &prefabName)) {
+        return;
+    }
+
+    try {
+        selectedEntity = prefabs.instantiate(scene, prefabName, {0.0f, 0.0f});
+        editorStatus = "Spawned prefab asset: " + prefabName;
+    } catch (const std::exception& exception) {
+        editorStatus = exception.what();
     }
 }
 

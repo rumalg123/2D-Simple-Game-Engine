@@ -10,9 +10,9 @@ Status values:
 
 ## Current Focus
 
-1. UI/editor authoring improvements.
-2. Tilemap collision and richer physics scene settings.
-3. Asset metadata consumers for animation, font, and audio workflows.
+1. Tilemap collision and richer physics scene settings.
+2. Asset metadata consumers for animation, font, and audio workflows.
+3. UI system primitives.
 
 ## Implemented Surface
 
@@ -32,6 +32,7 @@ Status values:
 - Text components for simple block-font HUD and world text.
 - Audio system for PCM `.wav` clips, procedural tones, and one-shot playback.
 - Asset manifest JSON catalog with stable IDs, type inference, scan/import workflow, and metadata blocks for sprite sheets, animation clips, fonts, and audio.
+- Editor asset browser actions for loading scene assets and loading/spawning prefab assets from the manifest.
 - Windows package script for selected game executables, configs, assets, runtime DLLs, README, launcher, zip, and manifest.
 - Reusable `templates/basic_game` starter with config, README, input setup, scene helpers, prefab usage, HUD text, and package target.
 - CTest package smoke coverage for selected-game package output.
@@ -65,10 +66,11 @@ Status values:
 | Done | Text and HUD | Add simple block-font text components | Supports screen-space and world-space text through the sprite batcher, including tint, alpha, layers, and JSON persistence. |
 | Planned | UI system | Add game UI primitives: font rendering, buttons, anchors/layout, menus, overlays | Current block text is useful only for simple HUDs. |
 | Done | Editor tools | Provide an ImGui editor shell and inspector for current components | Inspector can view/tune core components including sprite animation and tilemaps. |
-| Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level. |
+| Done | Editor tools | Add asset-browser authoring actions for scenes and prefabs | Manifest scene assets can load directly from the asset browser, and manifest prefab assets can load into the registry or spawn into the current scene. |
+| Planned | Editor tools | Improve inspector component editing, drag/drop assets, prefab editing, tile painting, collider editing, scene picker, undo/redo, and play/edit separation | Current ImGui editor is useful but still prototype-level; scene/prefab asset-browser actions are now covered. |
 | Done | Samples | Add complete Snake and Flappy Bird samples | `snake_sample` and `flappy_bird_sample` are separate runtime game executables linked against `engine_core`. |
 | Done | Tests | Add core regression executable and CTest entry | Existing tests cover input bindings, resource reuse, config loading/defaults, and scene JSON for text/tilemaps. |
-| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, grid helpers, script lifecycle callbacks, physics contact phases/filtering/query, asset manifest scan/save/load, config loading, resources, scene JSON, and selected-game package smoke. |
+| Done | Tests | Expand regression coverage around config, runtime mode, scene management, input events, helpers, and packaging | Tests cover app mode normalization, action changes, scene requests, gameplay helpers, prefab helpers, prefab asset load/spawn, grid helpers, script lifecycle callbacks, physics contact phases/filtering/query, asset manifest scan/save/load, config loading, resources, scene JSON, and selected-game package smoke. |
 
 ## Milestone 1: Developer Can Launch A Runtime Game
 
@@ -105,6 +107,7 @@ Required:
 - Done: simple text/HUD component and JSON support.
 - Done: basic audio playback through `GameContext`.
 - Done: asset manifest catalog and scan/import workflow.
+- Done: editor scene/prefab asset-browser authoring actions.
 - Done: collision layer/mask filtering, contact phases, and AABB overlap queries.
 - Done: entity lookup helpers.
 - Done: sprite/text/collider creation helpers.
