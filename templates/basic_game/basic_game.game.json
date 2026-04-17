@@ -1,0 +1,13 @@
+{
+  "windowTitle": "Basic Game Template",
+  "windowWidth": 800,
+  "windowHeight": 600,
+  "editorEnabled": false,
+  "startPlaying": true,
+  "hotReload": false,
+  "vsync": true,
+  "assetRoot": "templates/basic_game/assets",
+  "prefabDirectory": "templates/basic_game/assets/prefabs",
+  "editorLayoutPath": "assets/editor_layout.ini"
+}
+

@@ -90,6 +90,12 @@ add_executable(flappy_bird_sample
 
 target_link_libraries(flappy_bird_sample PRIVATE engine_core)
 
+add_executable(basic_game_template
+    templates/basic_game/src/BasicGame.cpp
+)
+
+target_link_libraries(basic_game_template PRIVATE engine_core)
+
 add_custom_command(TARGET engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
         ${CMAKE_SOURCE_DIR}/assets
@@ -146,5 +152,23 @@ add_custom_target(package_flappy_bird_sample
     WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     DEPENDS flappy_bird_sample
     COMMENT "Packaging Flappy Bird sample executable, config, runtime DLLs, and assets"
+    VERBATIM
+)
+
+add_custom_target(package_basic_game_template
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tools/package.ps1
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_SOURCE_DIR}/dist
+        -PackageName BasicGameTemplate
+        -ExecutableName basic_game_template.exe
+        -GameConfig ${CMAKE_SOURCE_DIR}/templates/basic_game/basic_game.game.json
+        -AssetsPath ${CMAKE_SOURCE_DIR}/templates/basic_game/assets
+        -ReadmePath ${CMAKE_SOURCE_DIR}/templates/basic_game/README.md
+        -AllowMissingAssets
+        -SkipBuild
+    WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
+    DEPENDS basic_game_template
+    COMMENT "Packaging basic game template executable, config, runtime DLLs, and assets"
     VERBATIM
 )

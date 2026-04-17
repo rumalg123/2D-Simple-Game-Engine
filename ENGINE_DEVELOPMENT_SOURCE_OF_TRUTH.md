@@ -10,13 +10,13 @@ Status values:
 
 ## Current Focus
 
-1. Reusable basic game project template.
-2. Dedicated editor/runtime app split.
-3. Runtime and packaging regression coverage.
+1. Dedicated editor/runtime app split.
+2. Runtime and packaging regression coverage.
+3. Script lifecycle expansion.
 
 ## Implemented Surface
 
-- Reusable `engine_core` static library with `engine`, `engine_tests`, `snake_sample`, and `flappy_bird_sample` executables.
+- Reusable `engine_core` static library with `engine`, `engine_tests`, `snake_sample`, `flappy_bird_sample`, and `basic_game_template` executables.
 - `IGame` hook interface through `configureInput`, `registerScripts`, `loadInitialScene`, `registerPlugins`, `onFixedUpdate`, `onEvent`, and `debugStats`.
 - ECS scene model with OpenGL sprite rendering, prefabs, JSON scene/prefab save and load, and an ImGui editor.
 - Named input actions with keyboard keys, gamepad buttons, gamepad axes, `isDown()`, and `getAxis()`.
@@ -29,6 +29,7 @@ Status values:
 - Text components for simple block-font HUD and world text.
 - Audio system for PCM `.wav` clips, procedural tones, and one-shot playback.
 - Windows package script for selected game executables, configs, assets, runtime DLLs, README, launcher, zip, and manifest.
+- Reusable `templates/basic_game` starter with config, README, input setup, scene helpers, prefab usage, HUD text, and package target.
 
 ## Roadmap
 
@@ -37,11 +38,11 @@ Status values:
 | Done | Source of truth | Keep this file as the canonical roadmap | Update status here as features are implemented. |
 | Done | Core architecture | Split reusable engine code into `engine_core` | Demo, tests, and `snake_sample` all link against the static library. |
 | Done | Game hook API | Add an `IGame` and `GameContext` entry point for game code | Hooks cover input setup, script registration, scene loading, plugins, fixed update, events, and debug stats. |
-| In Progress | Game project workflow | Add a project template and sample game project layout | `samples/snake` and `samples/flappy_bird` build as separate executables. `templates/basic_game` remains planned. |
+| Done | Game project workflow | Add a project template and sample game project layout | `samples/snake`, `samples/flappy_bird`, and `templates/basic_game` build as separate executables linked against `engine_core`. |
 | Done | Runtime configuration | Add per-game config for title, resolution, editor/runtime mode, asset paths, hot reload, and vsync | Implemented with `GameConfig`, flat JSON loading, and `demo.game.json`. |
 | In Progress | Runtime/editor split | Allow packaged games to run without editor panels | Basic runtime mode skips ImGui/editor UI and still runs rendering, input, audio, scripts, and physics. Dedicated `EditorApp`/`RuntimeApp` split is still planned. |
 | Done | Packaging | Add baseline package output for the demo executable | `tools/package.ps1` and `package_game` produce a folder, zip, launcher, config, copied assets/runtime DLLs, README, and manifest. |
-| Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample` and `package_flappy_bird_sample` package sample executables with config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
+| Done | Packaging | Package a selected game project, not only the demo executable | `package_snake_sample`, `package_flappy_bird_sample`, and `package_basic_game_template` package game executables with config, README, assets directory, runtime DLLs, launcher, zip, and manifest. |
 | Done | Rendering | Render sprites through OpenGL with texture resource reuse | Sprite components are the base render path for normal sprites, text, and tilemaps. |
 | Done | Prefabs and serialization | Save and load scenes and prefabs through JSON | Current JSON covers core transforms, sprites, animation, text, tilemaps, tags, prefabs, and resources. |
 | Done | Gameplay API | Add high-level helpers for sprites, text, colliders, prefabs, tags, and entity lookup | `Scene` now has creation and lookup helpers; `GameContext` can instantiate prefabs. |
@@ -85,7 +86,7 @@ Required:
 - Done: game entry points can implement `IGame` and pass the game object into `Engine`.
 - Done: baseline package script can produce a demo distribution folder and zip.
 - Done: packaging can target one selected sample.
-- Planned: reusable `templates/basic_game` exists.
+- Done: reusable `templates/basic_game` exists.
 
 ## Milestone 3: Developer Can Author Gameplay Efficiently
 

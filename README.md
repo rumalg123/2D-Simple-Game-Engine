@@ -40,6 +40,13 @@ cmake --build build --target flappy_bird_sample
 .\build\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
 ```
 
+Build the reusable basic game template:
+
+```powershell
+cmake --build build --target basic_game_template
+.\build\basic_game_template.exe --config .\templates\basic_game\basic_game.game.json
+```
+
 ## Tests
 
 Run the core regression tests with CTest:
@@ -84,6 +91,12 @@ Package the Flappy Bird sample as its own runtime game:
 cmake --build build --target package_flappy_bird_sample
 ```
 
+Package the basic game template:
+
+```powershell
+cmake --build build --target package_basic_game_template
+```
+
 Or call the package script directly for a selected executable:
 
 ```powershell
@@ -100,6 +113,7 @@ Or call the package script directly for a selected executable:
 
 - `engine_core` is the reusable static library target.
 - `engine` is the current demo executable.
+- `samples/snake`, `samples/flappy_bird`, and `templates/basic_game` are separate game projects linked to `engine_core`.
 - Engine runtime/editor code lives in `include/engine` and `src`.
 - The current game entry point is `src/main.cpp`.
 - The current demo game implementation is `src/DemoGame.cpp`, including demo scripts and demo-only editor tools.
