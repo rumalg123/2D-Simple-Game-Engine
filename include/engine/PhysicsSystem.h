@@ -9,6 +9,8 @@
 #include <vector>
 
 struct PhysicsSettings {
+    float gravityX = 0.0f;
+    float gravityY = 0.0f;
     bool emitStayEvents = true;
     bool emitExitEvents = true;
 };

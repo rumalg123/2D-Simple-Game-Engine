@@ -11,6 +11,7 @@
 #include "SceneSerializer.h"
 #include "ScriptSystem.h"
 
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <filesystem>
@@ -579,6 +580,85 @@ void testPhysicsAabbQueryUsesLayersAndMasks() {
     expect(hits.size() == 2, "AABB query should return every overlapping collider allowed by masks.");
 }
 
+void testPhysicsSettingsApplyGravity() {
+    Scene scene;
+    PhysicsSystem physics;
+    EventQueue events;
+
+    PhysicsSettings settings = physics.getSettings();
+    settings.gravityY = -10.0f;
+    physics.setSettings(settings);
+
+    const Entity entity = scene.createEntity();
+    scene.setTransform(entity, {0.0f, 0.0f});
+    scene.setPhysics(entity, {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, false, false, false});
+
+    physics.update(scene, events, 0.5f);
+
+    const TransformComponent* transform = scene.getTransform(entity);
+    const PhysicsComponent* body = scene.getPhysics(entity);
+    expect(transform != nullptr && body != nullptr, "Gravity test entity should keep transform and physics.");
+    expectNear(body->velocityY, -5.0f, "Physics gravity should affect dynamic body velocity.");
+    expectNear(transform->y, -2.5f, "Physics gravity should move dynamic body through integration.");
+}
+
+void testPhysicsTilemapCollisionAndQuery() {
+    Scene scene;
+    PhysicsSystem physics;
+    EventQueue events;
+
+    const Entity tilemapEntity = scene.createEntity();
+    scene.setTransform(tilemapEntity, {0.0f, 0.0f});
+    scene.setTilemap(tilemapEntity, {
+        2,
+        1,
+        1.0f,
+        1.0f,
+        1,
+        1,
+        -10,
+        InvalidTexture,
+        1.0f,
+        1.0f,
+        1.0f,
+        1.0f,
+        {0, -1},
+        true,
+        true,
+        false,
+        4u,
+        1u
+    });
+
+    const Entity body = scene.createEntity();
+    scene.setTransform(body, {0.5f, -0.25f});
+    scene.setPhysics(body, {0.0f, -1.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, false, false, false});
+    scene.setCollider(body, {0.25f, 0.25f, true, false, 1u, 4u});
+
+    physics.update(scene, events, 0.0f);
+    std::vector<Event> drained = events.drain();
+    expect(drained.size() == 1, "Solid tile overlap should publish one collision event.");
+    expect(drained[0].type == EventType::Collision, "Solid tile overlap should publish a collision.");
+    expect(drained[0].collision.phase == CollisionPhase::Enter, "First tilemap collision should be Enter.");
+
+    const TransformComponent* bodyTransform = scene.getTransform(body);
+    expect(bodyTransform != nullptr, "Tilemap collision body should keep its transform.");
+    expectNear(bodyTransform->y, 0.25f, "Tilemap collision should resolve the body out of the solid tile.");
+
+    const ColliderComponent query{0.25f, 0.25f, false, true, 1u, 4u};
+    std::vector<Entity> hits = physics.queryAabb(scene, {0.5f, -0.5f}, query);
+    expect(hits.size() == 1, "Tilemap query should include matching tilemap cells.");
+    expect(
+        std::find(hits.begin(), hits.end(), tilemapEntity) != hits.end(),
+        "AABB query should report tilemap entities when a solid tile overlaps.");
+
+    scene.getTransform(body)->x = 1.5f;
+    scene.getTransform(body)->y = -0.5f;
+    physics.clearContacts();
+    physics.update(scene, events, 0.0f);
+    expect(events.drain().empty(), "Empty tile cells should not collide.");
+}
+
 void testGridHelpersConvertCells() {
     const GridLayout layout{10, 5, 2.0f, 4.0f, {0.0f, 0.0f}, true};
 
@@ -626,7 +706,12 @@ void testSceneJsonRoundTripsTextAndTilemaps() {
         0.9f,
         1.0f,
         0.75f,
-        {0, 1, -1, 2, 3, 0}
+        {0, 1, -1, 2, 3, 0},
+        true,
+        true,
+        false,
+        16u,
+        32u
     });
     scene.setPlayerEntity(entity);
     scene.setCamera({5.0f, 6.0f, 1.5f, 2.0f, entity});
@@ -677,6 +762,9 @@ void testSceneJsonRoundTripsTextAndTilemaps() {
     expect(tilemap->layer == -30, "Tilemap layer should round-trip.");
     expectNear(tilemap->alpha, 0.75f, "Tilemap alpha should round-trip.");
     expect(tilemap->tiles == std::vector<int>({0, 1, -1, 2, 3, 0}), "Tilemap tile data should round-trip.");
+    expect(tilemap->collisionEnabled, "Tilemap collision enabled flag should round-trip.");
+    expect(tilemap->collisionSolid && !tilemap->collisionTrigger, "Tilemap collision mode should round-trip.");
+    expect(tilemap->collisionLayer == 16u && tilemap->collisionMask == 32u, "Tilemap collision filters should round-trip.");
     expect(tilemap->texture != InvalidTexture, "Loaded tilemap should resolve a usable texture.");
 }
 
@@ -704,6 +792,8 @@ int main() {
         runTest("ScriptSystem callback entity destruction", testScriptCallbacksCanDestroyEntities);
         runTest("Physics collision layers and phases", testPhysicsCollisionLayersAndContactPhases);
         runTest("Physics AABB query filters", testPhysicsAabbQueryUsesLayersAndMasks);
+        runTest("Physics settings gravity", testPhysicsSettingsApplyGravity);
+        runTest("Physics tilemap collision and query", testPhysicsTilemapCollisionAndQuery);
         runTest("Grid helpers", testGridHelpersConvertCells);
         runTest("Scene JSON text and tilemap round-trip", testSceneJsonRoundTripsTextAndTilemaps);
     } catch (const std::exception& exception) {

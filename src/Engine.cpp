@@ -651,6 +651,22 @@ void Engine::renderPlayPausePanel() {
     ImGui::SameLine();
     ImGui::Checkbox("Hot Reload", &hotReloadEnabled);
 
+    if (ImGui::CollapsingHeader("Physics Settings")) {
+        PhysicsSettings physicsSettings = physicsSystem.getSettings();
+        bool changed = false;
+        changed = ImGui::DragFloat("Gravity X", &physicsSettings.gravityX, 0.01f, -100.0f, 100.0f) || changed;
+        changed = ImGui::DragFloat("Gravity Y", &physicsSettings.gravityY, 0.01f, -100.0f, 100.0f) || changed;
+        changed = ImGui::Checkbox("Emit Stay Events", &physicsSettings.emitStayEvents) || changed;
+        changed = ImGui::Checkbox("Emit Exit Events", &physicsSettings.emitExitEvents) || changed;
+        if (changed) {
+            physicsSystem.setSettings(physicsSettings);
+        }
+        if (ImGui::Button("Clear Physics Contacts")) {
+            physicsSystem.clearContacts();
+            editorStatus = "Cleared physics contacts.";
+        }
+    }
+
     ImGui::Separator();
     ImGui::Text("Game: %s", game ? game->name() : "None");
     if (game) {
@@ -997,6 +1013,17 @@ void Engine::renderInspectorPanel() {
         ImGui::InputInt("Atlas Rows", &tilemap->atlasRows);
         ImGui::InputInt("Tile Layer", &tilemap->layer);
         ImGui::ColorEdit4("Tile Tint", &tilemap->red);
+        ImGui::Checkbox("Collision Enabled", &tilemap->collisionEnabled);
+        ImGui::Checkbox("Collision Solid", &tilemap->collisionSolid);
+        ImGui::Checkbox("Collision Trigger", &tilemap->collisionTrigger);
+        int collisionLayer = static_cast<int>(tilemap->collisionLayer);
+        if (ImGui::InputInt("Tile Collision Layer Bits", &collisionLayer)) {
+            tilemap->collisionLayer = static_cast<unsigned int>(std::max(0, collisionLayer));
+        }
+        int collisionMask = static_cast<int>(tilemap->collisionMask);
+        if (ImGui::InputInt("Tile Collision Mask Bits", &collisionMask)) {
+            tilemap->collisionMask = static_cast<unsigned int>(collisionMask);
+        }
         ImGui::Text("Texture handle: %zu", tilemap->texture);
         if (ImGui::Button("Use Default Tile Texture")) {
             tilemap->texture = getEditorDefaultTexture();

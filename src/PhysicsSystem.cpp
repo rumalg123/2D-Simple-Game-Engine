@@ -1,5 +1,6 @@
 #include "PhysicsSystem.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <unordered_set>
@@ -38,6 +39,73 @@ bool overlaps(
     const TransformComponent& firstTransform,
     const ColliderComponent& firstCollider,
     const TransformComponent& secondTransform,
+    const ColliderComponent& secondCollider);
+
+ColliderComponent tilemapColliderFor(const TilemapComponent& tilemap) {
+    return {
+        std::max(0.001f, tilemap.tileWidth) * 0.5f,
+        std::max(0.001f, tilemap.tileHeight) * 0.5f,
+        tilemap.collisionSolid,
+        tilemap.collisionTrigger,
+        tilemap.collisionLayer,
+        tilemap.collisionMask
+    };
+}
+
+TransformComponent tileTransformFor(
+    const TransformComponent& tilemapTransform,
+    const TilemapComponent& tilemap,
+    int column,
+    int row) {
+    const float tileWidth = std::max(0.001f, tilemap.tileWidth);
+    const float tileHeight = std::max(0.001f, tilemap.tileHeight);
+    const float tileHalfWidth = tileWidth * 0.5f;
+    const float tileHalfHeight = tileHeight * 0.5f;
+    return {
+        tilemapTransform.x + tileHalfWidth + static_cast<float>(column) * tileWidth,
+        tilemapTransform.y - tileHalfHeight - static_cast<float>(row) * tileHeight
+    };
+}
+
+bool tilemapCellIsSolid(const TilemapComponent& tilemap, int column, int row) {
+    const int columns = std::max(1, tilemap.columns);
+    const int rows = std::max(1, tilemap.rows);
+    if (!tilemap.collisionEnabled || column < 0 || row < 0 || column >= columns || row >= rows) {
+        return false;
+    }
+
+    const std::size_t tileIndex = static_cast<std::size_t>(row * columns + column);
+    return tileIndex < tilemap.tiles.size() && tilemap.tiles[tileIndex] >= 0;
+}
+
+bool overlapsAnyTile(
+    const TransformComponent& transform,
+    const ColliderComponent& collider,
+    const TransformComponent& tilemapTransform,
+    const TilemapComponent& tilemap,
+    const ColliderComponent& tileCollider) {
+    const int columns = std::max(1, tilemap.columns);
+    const int rows = std::max(1, tilemap.rows);
+    for (int row = 0; row < rows; ++row) {
+        for (int column = 0; column < columns; ++column) {
+            if (!tilemapCellIsSolid(tilemap, column, row)) {
+                continue;
+            }
+
+            const TransformComponent tileTransform = tileTransformFor(tilemapTransform, tilemap, column, row);
+            if (overlaps(transform, collider, tileTransform, tileCollider)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+}
+
+bool overlaps(
+    const TransformComponent& firstTransform,
+    const ColliderComponent& firstCollider,
+    const TransformComponent& secondTransform,
     const ColliderComponent& secondCollider) {
     return std::abs(firstTransform.x - secondTransform.x) <
                (firstCollider.halfWidth + secondCollider.halfWidth) &&
@@ -47,6 +115,32 @@ bool overlaps(
 
 CollisionPhase phaseForPair(const std::unordered_set<std::uint64_t>& previousPairs, std::uint64_t key) {
     return previousPairs.find(key) == previousPairs.end() ? CollisionPhase::Enter : CollisionPhase::Stay;
+}
+
+void resolveDynamicAgainstStatic(
+    TransformComponent& dynamicTransform,
+    const ColliderComponent& dynamicCollider,
+    PhysicsComponent& dynamicPhysics,
+    const TransformComponent& staticTransform,
+    const ColliderComponent& staticCollider) {
+    const float deltaX = dynamicTransform.x - staticTransform.x;
+    const float deltaY = dynamicTransform.y - staticTransform.y;
+    const float overlapX = dynamicCollider.halfWidth + staticCollider.halfWidth - std::abs(deltaX);
+    const float overlapY = dynamicCollider.halfHeight + staticCollider.halfHeight - std::abs(deltaY);
+
+    if (overlapX <= 0.0f || overlapY <= 0.0f) {
+        return;
+    }
+
+    if (overlapX < overlapY) {
+        const float direction = deltaX < 0.0f ? -1.0f : 1.0f;
+        dynamicTransform.x += direction * overlapX;
+        dynamicPhysics.velocityX = direction * std::abs(dynamicPhysics.velocityX) * dynamicPhysics.restitution;
+    } else {
+        const float direction = deltaY < 0.0f ? -1.0f : 1.0f;
+        dynamicTransform.y += direction * overlapY;
+        dynamicPhysics.velocityY = direction * std::abs(dynamicPhysics.velocityY) * dynamicPhysics.restitution;
+    }
 }
 }
 
@@ -76,6 +170,25 @@ std::vector<Entity> PhysicsSystem::queryAabb(
         }
     }
 
+    const ComponentPool<TilemapComponent>& tilemaps = scene.getTilemapPool();
+    for (std::size_t index = 0; index < tilemaps.size(); ++index) {
+        const Entity entity = tilemaps.entityAt(index);
+        const TransformComponent* tilemapTransform = scene.getTransform(entity);
+        const TilemapComponent& tilemap = tilemaps.componentAt(index);
+        if (!tilemapTransform || !tilemap.collisionEnabled) {
+            continue;
+        }
+
+        const ColliderComponent tileCollider = tilemapColliderFor(tilemap);
+        if (!layersCanCollide(collider, tileCollider)) {
+            continue;
+        }
+
+        if (overlapsAnyTile(transform, collider, *tilemapTransform, tilemap, tileCollider)) {
+            hits.push_back(entity);
+        }
+    }
+
     return hits;
 }
 
@@ -95,7 +208,7 @@ void PhysicsSystem::clearContacts() {
 void PhysicsSystem::integrate(Scene& scene, float deltaTime, JobSystem* jobSystem) {
     ComponentPool<PhysicsComponent>& physicsBodies = scene.getPhysicsPool();
 
-    auto integrateRange = [&scene, &physicsBodies, deltaTime](std::size_t begin, std::size_t end) {
+    auto integrateRange = [this, &scene, &physicsBodies, deltaTime](std::size_t begin, std::size_t end) {
         for (std::size_t index = begin; index < end; ++index) {
             const Entity entity = physicsBodies.entityAt(index);
             TransformComponent* transform = scene.getTransform(entity);
@@ -110,8 +223,8 @@ void PhysicsSystem::integrate(Scene& scene, float deltaTime, JobSystem* jobSyste
                 continue;
             }
 
-            physics.velocityX += physics.forceX * physics.inverseMass * deltaTime;
-            physics.velocityY += physics.forceY * physics.inverseMass * deltaTime;
+            physics.velocityX += (settings.gravityX + physics.forceX * physics.inverseMass) * deltaTime;
+            physics.velocityY += (settings.gravityY + physics.forceY * physics.inverseMass) * deltaTime;
 
             const float damping = maxValue(0.0f, 1.0f - physics.drag * deltaTime);
             physics.velocityX *= damping;
@@ -260,6 +373,79 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
                     secondPhysics->velocityY =
                         -direction * std::abs(secondPhysics->velocityY) * secondPhysics->restitution;
                 }
+            }
+        }
+    }
+
+    const ComponentPool<TilemapComponent>& tilemaps = scene.getTilemapPool();
+    for (std::size_t tilemapIndex = 0; tilemapIndex < tilemaps.size(); ++tilemapIndex) {
+        const Entity tilemapEntity = tilemaps.entityAt(tilemapIndex);
+        const TransformComponent* tilemapTransform = scene.getTransform(tilemapEntity);
+        const TilemapComponent& tilemap = tilemaps.componentAt(tilemapIndex);
+        if (!tilemapTransform || !tilemap.collisionEnabled) {
+            continue;
+        }
+
+        const ColliderComponent tileCollider = tilemapColliderFor(tilemap);
+        for (Entity entity : collisionEntities) {
+            if (entity == tilemapEntity || !scene.isValidEntity(entity)) {
+                continue;
+            }
+
+            TransformComponent* transform = scene.getTransform(entity);
+            ColliderComponent* collider = scene.getCollider(entity);
+            if (!transform || !collider || !layersCanCollide(*collider, tileCollider)) {
+                continue;
+            }
+
+            std::vector<TransformComponent> overlappingTiles;
+            const int columns = std::max(1, tilemap.columns);
+            const int rows = std::max(1, tilemap.rows);
+            for (int row = 0; row < rows; ++row) {
+                for (int column = 0; column < columns; ++column) {
+                    if (!tilemapCellIsSolid(tilemap, column, row)) {
+                        continue;
+                    }
+
+                    const TransformComponent tileTransform =
+                        tileTransformFor(*tilemapTransform, tilemap, column, row);
+                    if (overlaps(*transform, *collider, tileTransform, tileCollider)) {
+                        overlappingTiles.push_back(tileTransform);
+                    }
+                }
+            }
+
+            if (overlappingTiles.empty()) {
+                continue;
+            }
+
+            const std::uint64_t key = pairKey(entity, tilemapEntity);
+            const bool isTrigger = collider->trigger || tileCollider.trigger || !collider->solid || !tileCollider.solid;
+            if (isTrigger) {
+                currentTriggerPairs.insert(key);
+                const CollisionPhase phase = phaseForPair(previousTriggerPairs, key);
+                if (phase == CollisionPhase::Enter || settings.emitStayEvents) {
+                    events.publishTrigger(entity, tilemapEntity, phase);
+                }
+                continue;
+            }
+
+            PhysicsComponent* physics = scene.getPhysics(entity);
+            if (!physics || physics->isStatic) {
+                continue;
+            }
+
+            currentCollisionPairs.insert(key);
+            const CollisionPhase phase = phaseForPair(previousCollisionPairs, key);
+            if (phase == CollisionPhase::Enter || settings.emitStayEvents) {
+                events.publishCollision(entity, tilemapEntity, phase);
+            }
+
+            for (const TransformComponent& tileTransform : overlappingTiles) {
+                if (!overlaps(*transform, *collider, tileTransform, tileCollider)) {
+                    continue;
+                }
+                resolveDynamicAgainstStatic(*transform, *collider, *physics, tileTransform, tileCollider);
             }
         }
     }

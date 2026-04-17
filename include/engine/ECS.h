@@ -95,6 +95,11 @@ struct TilemapComponent {
     float blue = 1.0f;
     float alpha = 1.0f;
     std::vector<int> tiles;
+    bool collisionEnabled = false;
+    bool collisionSolid = true;
+    bool collisionTrigger = false;
+    unsigned int collisionLayer = ColliderLayerDefault;
+    unsigned int collisionMask = ColliderMaskAll;
 };
 
 struct ColliderComponent {

@@ -132,6 +132,12 @@ void writeTilemapFields(std::ostream& output, const TilemapComponent& tilemap, c
         output << "        \"texturePath\": \"" << escapeJson(texture.sourcePath) << "\",\n";
     }
 
+    writeBool(output, "collisionEnabled", tilemap.collisionEnabled, true);
+    writeBool(output, "collisionSolid", tilemap.collisionSolid, true);
+    writeBool(output, "collisionTrigger", tilemap.collisionTrigger, true);
+    writeUnsigned(output, "collisionLayer", tilemap.collisionLayer, true);
+    writeUnsigned(output, "collisionMask", tilemap.collisionMask, true);
+
     output << "        \"tiles\": [";
     for (std::size_t index = 0; index < tilemap.tiles.size(); ++index) {
         if (index % static_cast<std::size_t>(columns) == 0) {
@@ -632,6 +638,11 @@ TilemapComponent readTilemapComponent(const JsonValue& tilemapObject, ResourceMa
     tilemap.tileHeight = std::max(0.001f, tilemap.tileHeight);
     tilemap.atlasColumns = std::max(1, tilemap.atlasColumns);
     tilemap.atlasRows = std::max(1, tilemap.atlasRows);
+    tilemap.collisionEnabled = readBoolField(tilemapObject, "collisionEnabled", tilemap.collisionEnabled);
+    tilemap.collisionSolid = readBoolField(tilemapObject, "collisionSolid", tilemap.collisionSolid);
+    tilemap.collisionTrigger = readBoolField(tilemapObject, "collisionTrigger", tilemap.collisionTrigger);
+    tilemap.collisionLayer = readUnsignedField(tilemapObject, "collisionLayer", tilemap.collisionLayer);
+    tilemap.collisionMask = readUnsignedField(tilemapObject, "collisionMask", tilemap.collisionMask);
 
     const std::size_t tileCount = static_cast<std::size_t>(tilemap.columns) * static_cast<std::size_t>(tilemap.rows);
     tilemap.tiles.resize(tileCount, 0);

@@ -58,8 +58,8 @@ ctest --test-dir build --output-on-failure
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
 asset manifest scan/save/load, prefab asset load/spawn, scene/gameplay helpers, script lifecycle
-callbacks, physics contact phases and filters, JSON round-tripping for text/tilemap/collider scene
-data, and a package smoke test for the basic game template.
+callbacks, physics contact phases, filters, gravity, tilemap collision, JSON round-tripping for
+text/tilemap/collider scene data, and a package smoke test for the basic game template.
 
 ## Package
 
@@ -209,8 +209,11 @@ Collision and trigger events include a `CollisionPhase`:
 - `Exit` when a tracked pair separates.
 
 `PhysicsSystem::queryAabb()` runs the same AABB and layer/mask filtering without moving entities or
-publishing events. Collider layer and mask fields are editable in the inspector and persist through
-scene and prefab JSON.
+publishing events. `PhysicsSettings` controls gravity and contact phase emission. Collider layer and
+mask fields are editable in the inspector and persist through scene and prefab JSON.
+
+Tilemaps can opt into collision. Non-negative tile cells become static tile AABBs using the
+tilemap's collision layer, mask, solid, and trigger fields. Empty `-1` cells do not collide.
 
 ## Sprite Animation
 
@@ -234,8 +237,8 @@ Tile value `-1` leaves a cell empty; non-negative values select atlas frames lef
 top to bottom.
 
 Tilemaps are expanded into the normal sprite render path, so they support texture atlases, tint,
-alpha, layers, scene/prefab JSON, and editor inspection. The demo scene includes `DemoTilemap`
-using `assets/tiles.ppm`.
+alpha, layers, optional tile collision, scene/prefab JSON, and editor inspection. The demo scene
+includes `DemoTilemap` using `assets/tiles.ppm`.
 
 ## Audio
 
