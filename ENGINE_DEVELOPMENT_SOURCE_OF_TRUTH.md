@@ -1,5 +1,14 @@
 # 2D Engine Development Source Of Truth
 
+## Long-Term Platform Architecture
+
+For the proposed Unity-style 2D editor, independent project/player, scripting SDK,
+asset database, export pipeline, cross-platform strategy, implementation phases,
+and technical acceptance gates, see [Engine Architecture and Multi-Year Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md).
+
+This file records the existing prototype milestones and implementation status.
+The architecture roadmap describes proposed future capabilities, not completed features.
+
 This file is the working source of truth for turning SimpleEngine from a demo-oriented C++ 2D engine prototype into something a game developer can use to build and package small 2D games such as Snake, Flappy Bird, and arcade prototypes.
 
 Status values:
