@@ -17,6 +17,15 @@ Status values:
 - In Progress: active implementation has started.
 - Planned: accepted requirement, not started yet.
 
+## Current Platform Migration (In Progress)
+
+- **In Progress:** Compile-time separation of runtime sources (`se_runtime`) and
+  Dear ImGui integration (`se_editor_ui`), keeping the existing `engine_core`
+  compatibility target. Includes a standalone runtime-only CTest.
+- **Planned next:** Extract editor methods and ImGui-driven plugin panels from
+  `Engine.cpp` and `PluginSystem.cpp`, then introduce independent editor and player entry points.
+- Details: [Runtime/editor build boundaries](docs/BUILD_BOUNDARIES.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.
