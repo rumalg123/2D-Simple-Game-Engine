@@ -11,6 +11,9 @@ assets are included. The optional `GameFiles.zip` contains the original game
 source/config/assets as a separate download.
 
 See [release and compatibility details](docs/RELEASES.md).
+
+For the planned Unity-style 2D creation platform, see the
+[architecture and development roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md).
 Linux/macOS binaries are not currently distributed because audio and linking
 are Windows-specific.
 
