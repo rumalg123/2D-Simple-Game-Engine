@@ -115,6 +115,11 @@ target_link_libraries(engine_tests PRIVATE engine_core)
 
 add_test(NAME engine_core_tests COMMAND engine_tests)
 
+# Runtime-only regression target: does not link engine_core or Dear ImGui.
+add_executable(runtime_boundary_tests tests/RuntimeBoundaryTests.cpp)
+target_link_libraries(runtime_boundary_tests PRIVATE se_runtime)
+add_test(NAME runtime_boundary_tests COMMAND runtime_boundary_tests)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
