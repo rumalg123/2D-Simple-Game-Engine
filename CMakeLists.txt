@@ -10,10 +10,10 @@ enable_testing()
 
 find_package(Threads REQUIRED)
 
-add_library(engine_core STATIC
-    src/App.cpp
+# First stage of the editor/runtime split. Runtime components compile without
+# Dear ImGui, and can be linked directly by headless applications and tests.
+set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AssetManifest.cpp
-    src/Engine.cpp
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
@@ -31,8 +31,38 @@ add_library(engine_core STATIC
     src/Prefab.cpp
     src/ScriptSystem.cpp
     src/InputMap.cpp
-    src/PluginSystem.cpp
     src/glad.c
+)
+
+# Prevent accidentally introducing editor-only headers into the runtime sources.
+# This is an initial source-level guard, not a replacement for full dependency tests.
+foreach(runtime_source IN LISTS SIMPLEENGINE_RUNTIME_SOURCES)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/${runtime_source}" runtime_contents)
+    if(runtime_contents MATCHES "#[ \t]*include[ \t]*[<\"](imgui|imgui_impl)")
+        message(FATAL_ERROR
+            "Runtime file ${runtime_source} includes Dear ImGui. "
+            "Move editor functionality to the editor integration target.")
+    endif()
+endforeach()
+
+add_library(se_runtime STATIC ${SIMPLEENGINE_RUNTIME_SOURCES})
+target_include_directories(se_runtime PUBLIC
+    include
+    include/engine
+)
+target_link_libraries(se_runtime PUBLIC
+    glfw3
+    opengl32
+    gdi32
+    winmm
+    Threads::Threads
+)
+add_library(SimpleEngine::Runtime ALIAS se_runtime)
+
+# Dear ImGui is now compiled into a dedicated editor UI library.
+# The editor application still uses Engine.cpp and PluginSystem.cpp directly;
+# extracting their editor paths is a separate follow-up migration.
+add_library(se_editor_ui STATIC
     imgui/imgui.cpp
     imgui/imgui_draw.cpp
     imgui/imgui_tables.cpp
@@ -40,23 +70,28 @@ add_library(engine_core STATIC
     imgui/backends/imgui_impl_glfw.cpp
     imgui/backends/imgui_impl_opengl3.cpp
 )
+target_include_directories(se_editor_ui PUBLIC
+    imgui
+    imgui/backends
+)
+target_link_libraries(se_editor_ui PUBLIC glfw3)
+add_library(SimpleEngine::EditorUI ALIAS se_editor_ui)
 
+# Keep the existing target and all downstream executables source-compatible.
+# Once editor-facing Engine/Plugin code is extracted, this target can become
+# an editor-only compatibility facade.
+add_library(engine_core STATIC
+    src/App.cpp
+    src/Engine.cpp
+    src/PluginSystem.cpp
+)
 target_include_directories(engine_core PUBLIC
     include
     include/engine
 )
-
-target_include_directories(engine_core PRIVATE
-    imgui
-    imgui/backends
-)
-
 target_link_libraries(engine_core PUBLIC
-    glfw3
-    opengl32
-    gdi32
-    winmm
-    Threads::Threads
+    se_runtime
+    se_editor_ui
 )
 
 add_executable(engine
