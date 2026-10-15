@@ -1,5 +1,19 @@
 # SimpleEngine
 
+## Ready-to-run downloads
+
+Portable Windows x64 builds are published automatically after each push or
+merged pull request to `main`. Download the engine, Snake, Flappy Bird, or
+basic game template ZIP from the
+[latest GitHub Release](https://github.com/rumalg123/2D-Simple-Game-Engine/releases/latest).
+Extract the ZIP and run `launch.bat`. Runtime DLLs, config files, and required
+assets are included. The optional `GameFiles.zip` contains the original game
+source/config/assets as a separate download.
+
+See [release and compatibility details](docs/RELEASES.md).
+Linux/macOS binaries are not currently distributed because audio and linking
+are Windows-specific.
+
 SimpleEngine is a small C++17 2D engine prototype with an ImGui editor, ECS scene model,
 OpenGL sprite rendering, simple AABB physics, prefabs, JSON scene save/load, and a game hook
 interface.
