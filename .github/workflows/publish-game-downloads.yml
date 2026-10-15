@@ -1,0 +1,172 @@
+name: Build and publish Windows game downloads
+
+# Merging a pull request into main produces a push event.
+# Do not also subscribe to pull_request.closed: that would create duplicate releases.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+# Serialize main releases without cancelling an already-running publication.
+concurrency:
+  group: game-downloads-main
+  cancel-in-progress: false
+
+jobs:
+  release-windows:
+    name: Windows x64 build, tests, and release
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install native Windows build dependencies
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-binutils
+            mingw-w64-ucrt-x86_64-glfw
+
+      - name: Configure and build all game executables
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          for target in engine snake_sample flappy_bird_sample basic_game_template engine_tests; do
+            test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
+          done
+
+      - name: Bundle MinGW runtime DLL dependencies
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+
+          # Recursively inspect PE imports, including transitive imports of DLLs.
+          # Only bundle UCRT64 DLLs. Windows system DLLs must not be redistributed.
+          declare -A visited=()
+          copy_runtime_deps() {
+            local binary="$1"
+            while IFS= read -r dll; do
+              local dependency="/ucrt64/bin/${dll}"
+              if [[ ! -f "${dependency}" || -n "${visited[${dll}]+x}" ]]; then
+                continue
+              fi
+              visited["${dll}"]=1
+              cp -f "${dependency}" build/
+              echo "Bundled ${dll}"
+              copy_runtime_deps "${dependency}"
+            done < <(objdump -p "${binary}" | awk '/DLL Name:/ { print $3 }')
+          }
+
+          for target in engine snake_sample flappy_bird_sample basic_game_template; do
+            copy_runtime_deps "build/${target}.exe"
+          done
+          find build -maxdepth 1 -name '*.dll' -print
+
+      - name: Run core and packaging regression tests
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ctest --test-dir build --output-on-failure
+
+      - name: Package standalone applications and separate game files
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $packages = @(
+            @{ Name = 'SimpleEngine-Windows-x64'; Exe = 'engine.exe'; Config = 'demo.game.json'; Assets = 'assets'; Readme = 'README.md'; Missing = $false }
+            @{ Name = 'SnakeSample-Windows-x64'; Exe = 'snake_sample.exe'; Config = 'samples/snake/snake.game.json'; Assets = 'samples/snake/assets'; Readme = 'samples/snake/README.md'; Missing = $true }
+            @{ Name = 'FlappyBirdSample-Windows-x64'; Exe = 'flappy_bird_sample.exe'; Config = 'samples/flappy_bird/flappy_bird.game.json'; Assets = 'samples/flappy_bird/assets'; Readme = 'samples/flappy_bird/README.md'; Missing = $true }
+            @{ Name = 'BasicGameTemplate-Windows-x64'; Exe = 'basic_game_template.exe'; Config = 'templates/basic_game/basic_game.game.json'; Assets = 'templates/basic_game/assets'; Readme = 'templates/basic_game/README.md'; Missing = $true }
+          )
+
+          foreach ($package in $packages) {
+            $options = @{
+              BuildDir = 'build'
+              OutputDir = 'dist'
+              PackageName = $package.Name
+              ExecutableName = $package.Exe
+              GameConfig = $package.Config
+              AssetsPath = $package.Assets
+              ReadmePath = $package.Readme
+              AllowMissingAssets = $package.Missing
+              SkipBuild = $true
+            }
+            & ./tools/package.ps1 @options
+
+            $zip = Join-Path 'dist' ($package.Name + '.zip')
+            if (-not (Test-Path -LiteralPath $zip)) {
+              throw "Missing package: $zip"
+            }
+          }
+
+          & ./tools/package-game-files.ps1 -OutputDir 'dist'
+
+          $archives = @(Get-ChildItem -LiteralPath 'dist' -Filter '*.zip' -File | Sort-Object Name)
+          if ($archives.Count -ne 5) {
+            throw "Expected five ZIP assets, found $($archives.Count)."
+          }
+
+          $hashes = @($archives | ForEach-Object {
+            $hash = (Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+            "$hash  $($_.Name)"
+          })
+          [System.IO.File]::WriteAllLines(
+            (Join-Path (Get-Location).Path 'dist/SHA256SUMS.txt'),
+            [string[]]$hashes
+          )
+
+      - name: Publish downloadable GitHub Release assets
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $tag = "build-$env:GITHUB_RUN_NUMBER"
+          $releaseNotes = @'
+          Automated build from the main branch.
+
+          Windows x64 downloads:
+          - SimpleEngine-Windows-x64.zip: demo/editor application
+          - SnakeSample-Windows-x64.zip: standalone Snake game
+          - FlappyBirdSample-Windows-x64.zip: standalone Flappy Bird game
+          - BasicGameTemplate-Windows-x64.zip: standalone starter game
+
+          Additional downloads:
+          - GameFiles.zip: source game files, configurations, and original assets
+          - SHA256SUMS.txt: SHA-256 checksums for the ZIP files
+
+          To run a Windows game, extract its ZIP and double-click launch.bat.
+          The standalone ZIPs already include required game assets and runtime DLLs.
+          The separate GameFiles.zip is optional.
+          Linux/macOS executables are not published because the engine currently
+          uses Windows-only audio APIs and Windows-only link libraries.
+          '@
+
+          $assets = @(Get-ChildItem -LiteralPath 'dist' -File |
+            Where-Object { $_.Extension -eq '.zip' -or $_.Name -eq 'SHA256SUMS.txt' } |
+            Sort-Object Name |
+            ForEach-Object { $_.FullName })
+
+          if ($assets.Count -ne 6) {
+            throw "Expected six release assets, found $($assets.Count)."
+          }
+
+          gh release create $tag @assets --target $env:GITHUB_SHA --title "Game downloads #$env:GITHUB_RUN_NUMBER" --notes $releaseNotes --latest
+          if ($LASTEXITCODE -ne 0) {
+            throw "GitHub Release publication failed."
+          }
