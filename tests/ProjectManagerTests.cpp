@@ -1,4 +1,5 @@
 #include "ProjectManager.h"
+#include "SceneSerializer.h"
 
 #include <chrono>
 #include <filesystem>
@@ -33,6 +34,19 @@ int main() {
         std::cerr << "Project configuration not loaded.\n";
         return 1;
     }
+    if (created.config.startupScene.empty() ||
+        !std::filesystem::is_regular_file(created.config.startupScene)) {
+        std::cerr << "Generated project has no playable startup scene.\n";
+        return 1;
+    }
+    Scene starter;
+    ResourceManager resources;
+    if (!loadSceneFromJson(starter, resources, created.config.startupScene, error) ||
+        starter.findEntityByName("Welcome") == InvalidEntity) {
+        std::cerr << "Starter scene cannot be loaded: " << error << '\n';
+        return 1;
+    }
+
     ProjectInfo reopened;
     if (!ProjectManager::open(created.root, reopened, error) ||
         reopened.config.assetRoot != created.config.assetRoot) {
@@ -48,6 +62,16 @@ int main() {
         std::cerr << "Invalid project names were accepted.\n";
         return 1;
     }
+    // A missing startup scene is a hard error, not an empty game.
+    std::filesystem::rename(created.config.startupScene,
+                            created.config.startupScene + ".bak");
+    if (ProjectManager::open(created.root, reopened, error)) {
+        std::cerr << "Missing startup scene was accepted.\n";
+        return 1;
+    }
+    std::filesystem::rename(created.config.startupScene + ".bak",
+                            created.config.startupScene);
+
 
     // Test that a project cannot resolve assets outside its directory.
     const auto manifest = created.root / ProjectManager::ManifestName;
