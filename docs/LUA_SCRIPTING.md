@@ -106,9 +106,11 @@ license in \`licenses/Lua.txt\`. New CTest coverage runs on Windows PR builds.
   \`io\`, \`os\`, \`package\`, \`debug\`, and dangerous file-loading helpers are
   not exposed by default, but executing an untrusted game project can still
   be unsafe. Review projects/scripts before pressing Play.
-- Lua syntax validation compiles without running scripts; it does not prove
-  that a script cannot fail at runtime. Runtime failures are logged and do
-  not currently disable the affected component automatically.
+- Lua syntax validation compiles without executing the script; runtime
+  callbacks can still fail. Lua errors disable the failing Script component
+  to prevent repeated frame-by-frame failures. A 200,000-instruction budget
+  per callback interrupts accidental infinite Lua loops. The instruction
+  budget is a reliability safeguard, not secure execution isolation.
 - No Lua hot reload while a scene is running; Stop and press Reload Scripts.
 - Only **one ScriptComponent** per entity is supported by the current ECS.
 - Current Lua public API cannot spawn/destroy entities, handle typed events,
