@@ -2,6 +2,7 @@
 
 #include "InputMap.h"
 #include "ScriptSystem.h"
+#include "AnimationTools.h"
 #include "TilemapTools.h"
 
 extern "C" {
@@ -136,6 +137,42 @@ int setTile(lua_State* L) {
     return 1;
 }
 
+int playAnimation(lua_State* L) {
+    const Execution* e=execution(L);
+    const char* name=luaL_checkstring(L,1);
+    SpriteAnimationComponent* animation=e && e->context.scene
+        ? e->context.scene->getSpriteAnimation(e->entity) : nullptr;
+    const bool ok=animation &&
+        AnimationTools::selectClip(*animation,name);
+    lua_pushboolean(L,ok);
+    return 1;
+}
+int currentAnimation(lua_State* L) {
+    const Execution* e=execution(L);
+    const SpriteAnimationComponent* animation=e && e->context.scene
+        ? e->context.scene->getSpriteAnimation(e->entity) : nullptr;
+    if(!animation || animation->activeClip.empty()) {
+        lua_pushnil(L);return 1;
+    }
+    lua_pushlstring(L,animation->activeClip.c_str(),animation->activeClip.size());
+    return 1;
+}
+int stopAnimation(lua_State* L) {
+    const Execution* e=execution(L);
+    SpriteAnimationComponent* animation=e && e->context.scene
+        ? e->context.scene->getSpriteAnimation(e->entity) : nullptr;
+    if(animation) animation->playing=false;
+    return 0;
+}
+int animationFinished(lua_State* L) {
+    const Execution* e=execution(L);
+    const SpriteAnimationComponent* animation=e && e->context.scene
+        ? e->context.scene->getSpriteAnimation(e->entity) : nullptr;
+    lua_pushboolean(L,animation && !animation->loop && !animation->playing &&
+                        animation->currentFrame==animation->frameCount-1);
+    return 1;
+}
+
 int entityGuid(lua_State* L) {
     const Execution* e = execution(L);
     const std::string guid = e && e->context.scene
@@ -189,6 +226,10 @@ void setupState(lua_State* L, Execution* e) {
     expose(L, "set_float", setFloat, e);
     expose(L, "tile_at", tileAt, e);
     expose(L, "set_tile", setTile, e);
+    expose(L, "play_animation", playAnimation, e);
+    expose(L, "current_animation", currentAnimation, e);
+    expose(L, "stop_animation", stopAnimation, e);
+    expose(L, "animation_finished", animationFinished, e);
     expose(L, "entity_guid", entityGuid, e);
     expose(L, "log", logMessage, e);
     lua_setglobal(L, "engine");

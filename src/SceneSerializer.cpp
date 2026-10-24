@@ -1,4 +1,6 @@
 #include "SceneSerializer.h"
+#include "AnimationTools.h"
+#include "TilemapTools.h"
 
 #include <algorithm>
 #include <atomic>
@@ -94,7 +96,19 @@ void writeSpriteAnimationFields(std::ostream& output, const SpriteAnimationCompo
     writeFloat(output, "secondsPerFrame", animation.secondsPerFrame, true);
     writeFloat(output, "elapsedSeconds", animation.elapsedSeconds, true);
     writeBool(output, "playing", animation.playing, true);
-    writeBool(output, "loop", animation.loop, false);
+    writeBool(output, "loop", animation.loop, true);
+    output << "        \"activeClip\": \"" << escapeJson(animation.activeClip) << "\",\n";
+    output << "        \"clips\": [";
+    for(std::size_t i=0;i<animation.clips.size();++i) {
+        const auto& clip=animation.clips[i];
+        if(i) output << ',';
+        output << "\n          {\"name\": \"" << escapeJson(clip.name)
+               << "\", \"firstFrame\": " << clip.firstFrame
+               << ", \"frameCount\": " << clip.frameCount
+               << ", \"secondsPerFrame\": " << clip.secondsPerFrame
+               << ", \"loop\": " << (clip.loop?"true":"false") << '}';
+    }
+    output << "\n        ]\n";
 }
 
 void writeTextFields(std::ostream& output, const TextComponent& text) {
@@ -154,6 +168,14 @@ void writeTilemapFields(std::ostream& output, const TilemapComponent& tilemap, c
     }
     if (!tilemap.tiles.empty()) {
         output << '\n' << "        ";
+    }
+    output << "],\n";
+    writeBool(output, "terrainEnabled", tilemap.terrainEnabled, true);
+    writeInt(output, "terrainBaseTile", tilemap.terrainBaseTile, true);
+    output << "        \"terrainCells\": [";
+    for(std::size_t i=0;i<tilemap.terrainCells.size();++i) {
+        if(i) output << ',';
+        output << (tilemap.terrainCells[i]!=0?1:0);
     }
     output << "]\n";
 }
@@ -588,7 +610,7 @@ SpriteComponent readSpriteComponent(const JsonValue& sprite, ResourceManager& re
 }
 
 SpriteAnimationComponent readSpriteAnimationComponent(const JsonValue& animation) {
-    return SpriteAnimationComponent{
+    SpriteAnimationComponent result{
         readIntField(animation, "columns", 1),
         readIntField(animation, "rows", 1),
         readIntField(animation, "firstFrame", 0),
@@ -599,6 +621,26 @@ SpriteAnimationComponent readSpriteAnimationComponent(const JsonValue& animation
         readBoolField(animation, "playing", true),
         readBoolField(animation, "loop", true)
     };
+    result.activeClip=readStringField(animation,"activeClip","");
+    if(const JsonValue* clips=objectField(animation,"clips")) {
+        if(clips->type==JsonValue::Type::Array) {
+            for(const auto& item:clips->array) {
+                if(item.type!=JsonValue::Type::Object) continue;
+                AnimationClip clip;
+                clip.name=readStringField(item,"name","");
+                clip.firstFrame=readIntField(item,"firstFrame",0);
+                clip.frameCount=readIntField(item,"frameCount",1);
+                clip.secondsPerFrame=readFloatField(item,"secondsPerFrame",0.1f);
+                clip.loop=readBoolField(item,"loop",true);
+                AnimationTools::addClip(result,std::move(clip));
+            }
+        }
+    }
+    if(!result.activeClip.empty() &&
+       !AnimationTools::findClip(result,result.activeClip))
+        result.activeClip.clear();
+    AnimationTools::normalize(result);
+    return result;
 }
 
 TextComponent readTextComponent(const JsonValue& text) {
@@ -645,9 +687,25 @@ TilemapComponent readTilemapComponent(const JsonValue& tilemapObject, ResourceMa
     tilemap.collisionTrigger = readBoolField(tilemapObject, "collisionTrigger", tilemap.collisionTrigger);
     tilemap.collisionLayer = readUnsignedField(tilemapObject, "collisionLayer", tilemap.collisionLayer);
     tilemap.collisionMask = readUnsignedField(tilemapObject, "collisionMask", tilemap.collisionMask);
+    tilemap.terrainEnabled=readBoolField(tilemapObject,"terrainEnabled",false);
+    tilemap.terrainBaseTile=readIntField(tilemapObject,"terrainBaseTile",0);
+    tilemap.terrainCells=readIntArrayField(tilemapObject,"terrainCells");
+    const bool validTerrain=tilemap.terrainEnabled &&
+        tilemap.columns<=TilemapTools::MaxDimension &&
+        tilemap.rows<=TilemapTools::MaxDimension &&
+        tilemap.terrainBaseTile>=0 &&
+        tilemap.terrainBaseTile<=tilemap.atlasColumns*tilemap.atlasRows-16;
+    if(!validTerrain) {
+        tilemap.terrainEnabled=false;
+        tilemap.terrainCells.clear();
+    }
 
     const std::size_t tileCount = static_cast<std::size_t>(tilemap.columns) * static_cast<std::size_t>(tilemap.rows);
     tilemap.tiles.resize(tileCount, 0);
+    if(tilemap.terrainEnabled) {
+        tilemap.terrainCells.resize(tileCount,0);
+        TilemapTools::rebuildTerrain(tilemap);
+    }
     return tilemap;
 }
 

@@ -94,6 +94,21 @@ Status values:
   animation clip assets/state machines and optional Box2D backend.
 - Details: [Tilemap & Animation Workflow](docs/TILEMAP_ANIMATION_WORKFLOW.md).
 
+## Terrain Autotiling, Layers and Animation Clips (This PR)
+
+- **Implemented:** Opt-in 4-neighbor terrain occupancy channel in tilemaps,
+  with N/E/S/W 16-mask atlas selection and local neighbor recomputation.
+- **Implemented:** Terrain Paint / Terrain Erase / Bake UI, and separate
+  Tilemap entity layers with create and draw-order controls in Hierarchy.
+- **Implemented:** Named animation clip model, serialization and Timeline
+  add/edit/select/delete controls. Legacy animation fields remain valid.
+- **Implemented:** Lua named clip playback/query/stop/finished bindings.
+- **Implemented:** Headless terrain/layer/clip/legacy-scene regression tests
+  and Lua playback tests, added to Windows PR and release CI.
+- **Next:** Reusable TileSet/AnimationClip resources, multi-terrain rules,
+  autotile stamp brushes, animation transition graphs and game export.
+- Details: [Terrain, Clips & Layers](docs/TERRAIN_CLIPS_LAYERS.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.

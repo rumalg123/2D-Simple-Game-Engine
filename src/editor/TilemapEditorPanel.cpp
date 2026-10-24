@@ -26,6 +26,35 @@ void Engine::renderTilemapEditorPanel() {
 
     ImGui::Text("Canvas: %d x %d, atlas: %d x %d",
                 map.columns, map.rows, map.atlasColumns, map.atlasRows);
+    ImGui::SeparatorText("4-neighbor Terrain Autotiling");
+    if(!map.terrainEnabled) {
+        static int terrainBase=0;
+        ImGui::InputInt("Terrain Atlas Base",&terrainBase);
+        ImGui::TextDisabled("Requires 16 consecutive atlas tiles in N/E/S/W mask order.");
+        if(ImGui::Button("Prepare 4x4 Atlas") && editable) {
+            recordSceneEdit();
+            map.atlasColumns=std::max(4,map.atlasColumns);
+            map.atlasRows=std::max(4,map.atlasRows);
+        }
+        ImGui::SameLine();
+        if(ImGui::Button("Enable Terrain") && editable) {
+            // Attempt on a temporary copy so invalid settings do not alter the scene.
+            TilemapComponent candidate=map;
+            if(TilemapTools::enableTerrain(candidate,terrainBase)) {
+                recordSceneEdit();
+                map=std::move(candidate);
+                tileTool=5;
+            } else editorStatus="Terrain needs a 16-tile atlas and a map at most 256x256.";
+        }
+    } else {
+        ImGui::Text("Terrain active, base atlas tile %d",map.terrainBaseTile);
+        if(ImGui::Button("Bake Terrain to Static Tiles") && editable) {
+            recordSceneEdit();
+            TilemapTools::disableTerrain(map);
+            tileTool=0;
+        }
+    }
+
     int width = std::clamp(map.columns,1,TilemapTools::MaxDimension);
     int height = std::clamp(map.rows,1,TilemapTools::MaxDimension);
     ImGui::SetNextItemWidth(90);
@@ -45,17 +74,23 @@ void Engine::renderTilemapEditorPanel() {
     if (ImGui::Button("Clear to Empty") && editable) {
         recordSceneEdit();
         TilemapTools::resize(map, width, height);
-        std::fill(map.tiles.begin(),map.tiles.end(),TilemapTools::EmptyTile);
+        if(map.terrainEnabled) {
+            std::fill(map.terrainCells.begin(),map.terrainCells.end(),0);
+            TilemapTools::rebuildTerrain(map);
+        } else std::fill(map.tiles.begin(),map.tiles.end(),TilemapTools::EmptyTile);
     }
     ImGui::SameLine();
-    if (ImGui::Button("Checkerboard") && editable) {
+    if (ImGui::Button("Checkerboard") && editable && !map.terrainEnabled) {
         recordSceneEdit();
         TilemapTools::checkerboard(map,0,
             std::min(1,std::clamp(map.atlasColumns,1,16)*std::clamp(map.atlasRows,1,16)-1));
     }
 
-    const char* tools[] = {"Pencil", "Eraser", "Flood Fill", "Line", "Eyedropper"};
-    ImGui::Combo("Tool", &tileTool, tools, 5);
+    const char* tools[] = {"Pencil", "Eraser", "Flood Fill", "Line", "Eyedropper",
+                            "Terrain Paint", "Terrain Erase"};
+    ImGui::Combo("Tool", &tileTool, tools, 7);
+    if(map.terrainEnabled && tileTool<5) tileTool=5;
+    if(!map.terrainEnabled && tileTool>=5) tileTool=0;
     const int atlasCount = std::clamp(map.atlasColumns,1,16) *
                            std::clamp(map.atlasRows,1,16);
     tileBrush = std::clamp(tileBrush,0,atlasCount-1);
@@ -119,12 +154,16 @@ void Engine::renderTilemapEditorPanel() {
                 } else if(tileTool==0||tileTool==1) {
                     TilemapTools::paint(map,column,row,
                         tileTool==1 ? TilemapTools::EmptyTile : tileBrush);
+                } else if(tileTool==5||tileTool==6) {
+                    TilemapTools::paintTerrain(map,column,row,tileTool==5);
                 }
             }
         }
         if(editable && down && inside && tileStrokeActive &&
-           (tileTool==0||tileTool==1)) {
-            TilemapTools::paint(map,column,row,
+           (tileTool==0||tileTool==1||tileTool==5||tileTool==6)) {
+            if(tileTool>=5)
+                TilemapTools::paintTerrain(map,column,row,tileTool==5);
+            else TilemapTools::paint(map,column,row,
                 tileTool==1 ? TilemapTools::EmptyTile : tileBrush);
         }
         if(tileStrokeActive && tileTool==3 && down) {

@@ -1,4 +1,5 @@
 #include "InputMap.h"
+#include "AnimationTools.h"
 #include "LuaScriptRuntime.h"
 #include "ProjectManager.h"
 #include "ResourceManager.h"
@@ -155,6 +156,42 @@ end
                 "Failing or looping Lua scripts were not disabled");
         failureScripts.destroyAll(failureScene);
         failureScripts.clear();
+
+        // Named animation clips are addressable from an entity's own Lua state.
+        write(scriptsPath / "ClipSwitch.lua", R"LUA(
+function on_start()
+    engine.set_float("clip_started", engine.play_animation("Run") and 1 or 0)
+    engine.set_float("clip_selected",
+                     engine.current_animation() == "Run" and 1 or 0)
+end
+function on_update(dt)
+    engine.set_float("clip_finished", engine.animation_finished() and 1 or 0)
+end
+)LUA");
+        LuaScriptRuntime clipLua;
+        ScriptSystem clipScripts;
+        errors.clear();
+        require(clipLua.registerDirectory(clipScripts,scriptsPath,errors)==4,
+                "Named clip Lua behaviour failed to register");
+        Scene clipScene;
+        const Entity actor=clipScene.createEntity("Clip Actor");
+        SpriteAnimationComponent actorAnimation;
+        actorAnimation.columns=4;
+        require(AnimationTools::addClip(actorAnimation,
+                    {"Run",1,2,0.10f,false}),"Failed to prepare Run clip");
+        clipScene.setSpriteAnimation(actor,actorAnimation);
+        clipScene.setScript(actor,{"ClipSwitch",true,0});
+        clipScripts.update(clipScene,0.01f);
+        near(clipScene.getScript(actor)->parameters.at("clip_started"),1,
+             "Lua could not select a named animation");
+        near(clipScene.getScript(actor)->parameters.at("clip_selected"),1,
+             "Lua could not inspect the selected animation");
+        AnimationTools::advance(*clipScene.getSpriteAnimation(actor),0.25f);
+        clipScripts.update(clipScene,0.01f);
+        near(clipScene.getScript(actor)->parameters.at("clip_finished"),1,
+             "Lua could not detect a finished non-looping animation");
+        clipScripts.destroyAll(clipScene);
+        clipScripts.clear();
 
         // Real created projects must already be valid and scriptable end-to-end.
         ProjectInfo project;

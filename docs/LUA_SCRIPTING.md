@@ -102,6 +102,21 @@ The existing packaging workflow recursively collects the Lua 5.4 runtime
 DLL with other UCRT64 dependencies. Windows ZIPs now include the Lua MIT
 license in \`licenses/Lua.txt\`. New CTest coverage runs on Windows PR builds.
 
+## Named sprite-sheet animation clips
+
+The current entity can now select its animation by name:
+
+```lua
+engine.play_animation("Run")    -- returns true on success
+engine.current_animation()     -- name or nil
+engine.stop_animation()        -- pause its playback
+engine.animation_finished()    -- completed a non-looping clip?
+```
+
+Use the Sprite Animation Timeline to define and select named clips;
+these are saved with your game scene. See
+[Terrain, Clips & Layers](TERRAIN_CLIPS_LAYERS.md).
+
 ## Trust and current limitations
 
 - This is an embedded Lua gameplay API, **not a strong security sandbox**.
