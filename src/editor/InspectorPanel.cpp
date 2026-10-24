@@ -249,82 +249,32 @@ void Engine::renderInspectorPanel() {
     }
 
     if (tilemap && ImGui::CollapsingHeader("Tilemap", ImGuiTreeNodeFlags_DefaultOpen)) {
-        ImGui::InputInt("Columns", &tilemap->columns);
-        ImGui::InputInt("Rows", &tilemap->rows);
+        ImGui::Text("Map dimensions: %d columns x %d rows",
+                    tilemap->columns, tilemap->rows);
+        ImGui::TextDisabled("Use Tilemap Painter for resizing and visual painting.");
         ImGui::DragFloat("Tile Width", &tilemap->tileWidth, 0.01f, 0.01f, 5.0f);
         ImGui::DragFloat("Tile Height", &tilemap->tileHeight, 0.01f, 0.01f, 5.0f);
         ImGui::InputInt("Atlas Columns", &tilemap->atlasColumns);
         ImGui::InputInt("Atlas Rows", &tilemap->atlasRows);
+        tilemap->atlasColumns = std::clamp(tilemap->atlasColumns, 1, 16);
+        tilemap->atlasRows = std::clamp(tilemap->atlasRows, 1, 16);
         ImGui::InputInt("Tile Layer", &tilemap->layer);
         ImGui::ColorEdit4("Tile Tint", &tilemap->red);
         ImGui::Checkbox("Collision Enabled", &tilemap->collisionEnabled);
         ImGui::Checkbox("Collision Solid", &tilemap->collisionSolid);
         ImGui::Checkbox("Collision Trigger", &tilemap->collisionTrigger);
         int collisionLayer = static_cast<int>(tilemap->collisionLayer);
-        if (ImGui::InputInt("Tile Collision Layer Bits", &collisionLayer)) {
+        if (ImGui::InputInt("Collision Layer", &collisionLayer)) {
             tilemap->collisionLayer = static_cast<unsigned int>(std::max(0, collisionLayer));
         }
         int collisionMask = static_cast<int>(tilemap->collisionMask);
-        if (ImGui::InputInt("Tile Collision Mask Bits", &collisionMask)) {
+        if (ImGui::InputInt("Collision Mask", &collisionMask)) {
             tilemap->collisionMask = static_cast<unsigned int>(collisionMask);
         }
         ImGui::Text("Texture handle: %zu", tilemap->texture);
-        if (ImGui::Button("Use Default Tile Texture")) {
+        if (ImGui::Button("Use Default White Tile Texture")) {
             tilemap->texture = getEditorDefaultTexture();
         }
-        ImGui::SameLine();
-        if (ImGui::Button("Resize Tiles")) {
-            tilemap->columns = std::max(1, tilemap->columns);
-            tilemap->rows = std::max(1, tilemap->rows);
-            tilemap->tiles.resize(static_cast<std::size_t>(tilemap->columns * tilemap->rows), 0);
-        }
-        if (ImGui::Button("Fill Tile 0")) {
-            tilemap->columns = std::max(1, tilemap->columns);
-            tilemap->rows = std::max(1, tilemap->rows);
-            tilemap->tiles.assign(static_cast<std::size_t>(tilemap->columns * tilemap->rows), 0);
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Clear Tiles")) {
-            tilemap->columns = std::max(1, tilemap->columns);
-            tilemap->rows = std::max(1, tilemap->rows);
-            tilemap->tiles.assign(static_cast<std::size_t>(tilemap->columns * tilemap->rows), -1);
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Checker")) {
-            tilemap->columns = std::max(1, tilemap->columns);
-            tilemap->rows = std::max(1, tilemap->rows);
-            tilemap->tiles.resize(static_cast<std::size_t>(tilemap->columns * tilemap->rows), 0);
-            const int tileChoices = std::max(1, tilemap->atlasColumns * tilemap->atlasRows);
-            for (int row = 0; row < tilemap->rows; ++row) {
-                for (int column = 0; column < tilemap->columns; ++column) {
-                    tilemap->tiles[static_cast<std::size_t>(row * tilemap->columns + column)] =
-                        (row + column) % std::min(2, tileChoices);
-                }
-            }
-        }
-
-        tilemap->columns = std::max(1, tilemap->columns);
-        tilemap->rows = std::max(1, tilemap->rows);
-        const int editableRows = std::min(tilemap->rows, 8);
-        const int editableColumns = std::min(tilemap->columns, 16);
-        if (static_cast<int>(tilemap->tiles.size()) < tilemap->columns * tilemap->rows) {
-            tilemap->tiles.resize(static_cast<std::size_t>(tilemap->columns * tilemap->rows), 0);
-        }
-        ImGui::Text("Tile indices (-1 hides tile). Showing %d x %d.", editableColumns, editableRows);
-        ImGui::PushItemWidth(42.0f);
-        for (int row = 0; row < editableRows; ++row) {
-            for (int column = 0; column < editableColumns; ++column) {
-                const std::size_t tileIndex = static_cast<std::size_t>(row * tilemap->columns + column);
-                ImGui::PushID(static_cast<int>(tileIndex));
-                ImGui::InputInt("##tile", &tilemap->tiles[tileIndex], 0, 0);
-                ImGui::PopID();
-                if (column + 1 < editableColumns) {
-                    ImGui::SameLine();
-                }
-            }
-        }
-        ImGui::PopItemWidth();
-
         if (ImGui::Button("Remove Tilemap")) {
             recordSceneEdit();
             scene.getTilemapPool().remove(selectedEntity);
