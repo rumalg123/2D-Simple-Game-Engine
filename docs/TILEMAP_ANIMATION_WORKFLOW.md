@@ -71,8 +71,10 @@ and mask filtering, and collision events remain unchanged.
   checkerboard each use a single checkpoint.
 - Painting is disabled while Play/Pause simulation is active, preserving
   authored-scene isolation.
-- Existing Lua scripts and ScriptSystem can coexist with tilemaps and sprite
-  animations without changes to the Lua public API.
+- Lua gameplay scripts can now call `engine.tile_at(column,row)`
+  and `engine.set_tile(column,row,atlasIndex)` to read or paint their own
+  entity's Tilemap. Temporary runtime modifications roll back on Stop.
+- Existing Lua movement/parameter scripts remain compatible.
 
 ## Test coverage
 
