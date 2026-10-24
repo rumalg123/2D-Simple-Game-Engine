@@ -10,6 +10,7 @@ struct GameConfig {
     bool startPlaying = true;
     bool hotReload = true;
     bool vsync = true;
+    std::string startupScene;
     std::string assetRoot = "assets";
     std::string prefabDirectory = "assets/prefabs";
     std::string editorLayoutPath = "assets/editor_layout.ini";
