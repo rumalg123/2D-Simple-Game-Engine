@@ -38,6 +38,7 @@ jobs:
             mingw-w64-ucrt-x86_64-ninja
             mingw-w64-ucrt-x86_64-binutils
             mingw-w64-ucrt-x86_64-glfw
+            mingw-w64-ucrt-x86_64-lua54
 
       - name: Configure and build all game executables
         shell: msys2 {0}
@@ -45,7 +46,7 @@ jobs:
           set -euo pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel 2
-          for target in engine snake_sample flappy_bird_sample basic_game_template engine_tests runtime_boundary_tests player_scene_tests SimpleEngineEditor SimpleEnginePlayer; do
+          for target in engine snake_sample flappy_bird_sample basic_game_template engine_tests runtime_boundary_tests player_scene_tests lua_gameplay_tests SimpleEngineEditor SimpleEnginePlayer; do
             test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
           done
 
@@ -156,7 +157,7 @@ jobs:
           - SHA256SUMS.txt: SHA-256 checksums for the ZIP files
 
           To run a Windows game or editor, extract the desired ZIP and double-click launch.bat.
-          The new player opens a serialized static scene; user-authored scripting is not yet supported.
+          The standalone editor and player support Lua 5.4 scripts in project Assets/Scripts.
           The standalone ZIPs already include required game assets and runtime DLLs.
           The separate GameFiles.zip is optional.
           Linux/macOS executables are not published because the engine currently
