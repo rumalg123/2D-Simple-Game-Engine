@@ -2,7 +2,7 @@
 
 Part of the [SimpleEngine architecture roadmap](ENGINE_ARCHITECTURE_ROADMAP.md).
 The separation is **in progress**, not finished. This describes the new
-compilation targets after the editor-panel extraction phase.
+compilation targets after the editor UI-frame and gizmo extraction phase.
 
 ## Compile and link targets
 
@@ -10,8 +10,8 @@ compilation targets after the editor-panel extraction phase.
 | --- | --- | --- |
 | `se_runtime` | ECS/scenes, core runtime systems, and generic `PluginManager` | No |
 | `se_editor_ui` | Vendored Dear ImGui core and GLFW/OpenGL backends | Yes |
-| `se_editor` | Scene Hierarchy, Object Inspector, Asset Browser, built-in prefab plugin UI | Yes |
-| `engine_core` | Legacy `Engine.cpp` and `App.cpp` application shell | Yes (not runtime-only yet) |
+| `se_editor` | Scene Hierarchy, Inspector, Asset Browser, prefab plugin UI, frame lifecycle, simulation panel, gizmo | Yes |
+| `engine_core` | Legacy `Engine.cpp` and `App.cpp` application shell; delegates UI to `se_editor` | No direct ImGui references; still links the editor |
 | `runtime_boundary_tests` | Links **only** `se_runtime`; tests scene and plugin lifecycle | No |
 
 Namespaced aliases: `SimpleEngine::Runtime`, `SimpleEngine::EditorUI`,
@@ -23,6 +23,10 @@ All their public APIs and output names remain unchanged.
 
 ## Where the editor code lives now
 
+- `src/editor/EditorFrame.cpp`: `Engine::initImGui()`, frame lifecycle,
+  UI panel dispatch, draw submission and editor keyboard-capture query
+- `src/editor/Gizmo.cpp`: transform gizmo drawing, hit-testing and world/screen conversions
+- `src/editor/EnginePanel.cpp`: simulation control, statistics, rendering settings
 - `src/editor/SceneHierarchyPanel.cpp`: `Engine::renderSceneHierarchyPanel()`
 - `src/editor/InspectorPanel.cpp`: `Engine::renderInspectorPanel()` and local `editStringField()`
 - `src/editor/AssetBrowserPanel.cpp`: `Engine::renderAssetBrowserPanel()`
@@ -31,18 +35,24 @@ All their public APIs and output names remain unchanged.
 - `src/PluginSystem.cpp`: generic, ImGui-independent plugin registration,
   `onUpdate`, teardown, count and names.
 
-The panels remain `Engine` methods with access to its private data to preserve
-existing behavior for this stage. They do **not** yet use a standalone editor
-service/context API, and `Engine.cpp` still owns editor bootstrap, gizmos,
-play/pause UI and several document-editing operations.
+The editor implementations remain `Engine` methods with access to its private
+data to preserve behavior. `Engine.cpp` now has no direct ImGui includes or
+`ImGui::` references; it calls methods implemented in `se_editor`.
+The boundary is still **not** a runtime-only application: `engine_core` links
+editor code, and `Engine` owns both editor and gameplay state. An explicit
+`EditorContext` and independently linked player remain future work.
 
 ## Guardrails and tests
 
-CMake scans the source files assigned to `se_runtime` for direct ImGui header
-includes and rejects them at configure time. The runtime-only test now
-exercises `PluginManager` registration, update and unload in addition to
-scene/component operations. This only establishes the first boundary: it is
-not a full transitive dependency verifier, and runtime is still Windows-focused.
+CMake scans all `se_runtime` source files for direct ImGui includes and now
+also rejects direct ImGui includes/calls in `src/Engine.cpp`. This does not
+fully validate transitive dependencies. The runtime-only CTest continues to
+cover scene/component and generic plugin lifecycle. Windows-specific linking
+and WinMM audio remain in place.
+
+`.github/workflows/validate-pr.yml` now builds all Windows executables and
+runs CTest for pull requests targeting `main`. It is separate from the
+existing publish workflow, which still runs only on pushes to `main`.
 
 Windows + MSYS2 UCRT64 prerequisites are in the repository release workflow.
 To build and run the full regression suite:
@@ -66,15 +76,15 @@ GUI functionality.
 
 ## Follow-up milestones
 
-1. Extract editor bootstrap and play/gizmo controls from `Engine.cpp`.
-2. Replace direct `Engine` private-state access in editor panels with
-   `EditorContext` / `EditorCommands` and explicit callbacks.
-3. Move `onRenderUi` out of runtime-facing `IPlugin` to a separate editor
-   extension interface; make default editor plugins registered by the editor.
-4. Add separate `SimpleEngineEditor` and `SimpleEnginePlayer` entry points.
-5. Implement independent projects, persistent entity identifiers and
+1. Replace direct `Engine` private-state access in editor components
+   with an `EditorContext` and undoable editor command API.
+2. Separate UI-facing plugin extension callbacks from runtime `IPlugin` and
+   register built-in editor plugins only when the editor is active.
+3. Add independent `SimpleEngineEditor` and `SimpleEnginePlayer` entry
+   points so the player can link without editor symbols.
+4. Implement independent projects, persistent entity identifiers and
    authored-vs-runtime scene isolation.
-6. Replace Windows-only audio/link dependencies and add native platform CI.
+5. Replace Windows-only audio/link dependencies and add native platform CI.
 
 This remains a **behavior-preserving refactor**, not yet a new project authoring
 feature or a cross-platform engine release.

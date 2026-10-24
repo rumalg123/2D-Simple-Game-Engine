@@ -1,0 +1,71 @@
+name: Validate Windows pull requests
+
+# The main-branch release workflow is intentionally independent.
+# A pull request should compile and test without publishing release assets.
+on:
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    name: Windows x64 build and CTest
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - name: Check out candidate source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install MSYS2 UCRT64 toolchain and GLFW
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            mingw-w64-ucrt-x86_64-gcc
+            mingw-w64-ucrt-x86_64-cmake
+            mingw-w64-ucrt-x86_64-ninja
+            mingw-w64-ucrt-x86_64-binutils
+            mingw-w64-ucrt-x86_64-glfw
+
+      - name: Configure and compile every executable
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --parallel 2
+          for target in engine engine_tests runtime_boundary_tests snake_sample flappy_bird_sample basic_game_template; do
+            test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
+          done
+
+      - name: Bundle runtime DLLs for smoke testing
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          declare -A visited=()
+          copy_runtime_deps() {
+            local binary="$1"
+            while IFS= read -r dll; do
+              local dependency="/ucrt64/bin/${dll}"
+              if [[ ! -f "${dependency}" || -n "${visited[${dll}]+x}" ]]; then
+                continue
+              fi
+              visited["${dll}"]=1
+              cp -f "${dependency}" build/
+              copy_runtime_deps "${dependency}"
+            done < <(objdump -p "${binary}" | awk '/DLL Name:/ { print $3 }')
+          }
+          for target in engine engine_tests runtime_boundary_tests snake_sample flappy_bird_sample basic_game_template; do
+            copy_runtime_deps "build/${target}.exe"
+          done
+
+      - name: Run all tests, including packaging smoke test
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          ctest --test-dir build --output-on-failure
