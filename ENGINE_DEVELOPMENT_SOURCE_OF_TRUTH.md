@@ -21,11 +21,14 @@ Status values:
 
 - **Done:** Split compilation of runtime (`se_runtime`) and Dear ImGui
   (`se_editor_ui`) with a compatibility `engine_core` and runtime-only CTest.
-- **In Progress:** Move scene hierarchy, inspector, asset browser and built-in
-  prefab-plugin UI to `se_editor`. The generic `PluginManager` is now part of
-  `se_runtime`; the runtime-only test covers its lifecycle.
-- **Planned next:** Decouple editor panels from `Engine` private state, extract
-  editor bootstrap and gizmos, then introduce independent editor/player apps.
+- **Done:** Extract scene hierarchy, inspector, asset browser and built-in
+  prefab-plugin UI into `se_editor`, and move generic `PluginManager` to
+  `se_runtime` with runtime-only lifecycle coverage.
+- **In Progress:** Extract ImGui lifecycle, simulation controls and gizmos
+  into `src/editor`, replace direct keyboard capture access with an editor
+  query, and add Windows build/CTest validation for PRs.
+- **Planned next:** Introduce `EditorContext`, then independently linked
+  editor/player applications with no ImGui library in the player.
 - Details: [Runtime/editor build boundaries](docs/BUILD_BOUNDARIES.md).
 
 ## Current Focus
