@@ -18,7 +18,7 @@ struct Event;
 // C++ scripts in ScriptSystem continue to work without changes.
 class LuaScriptRuntime {
 public:
-    LuaScriptRuntime() = default;
+    LuaScriptRuntime();
     ~LuaScriptRuntime();
     LuaScriptRuntime(const LuaScriptRuntime&) = delete;
     LuaScriptRuntime& operator=(const LuaScriptRuntime&) = delete;
