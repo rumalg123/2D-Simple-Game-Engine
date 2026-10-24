@@ -876,6 +876,7 @@ bool saveSceneToJson(const Scene& scene, const ResourceManager& resources, const
         wroteEntity = true;
         output << "    {\n";
         output << "      \"id\": " << entity;
+        output << ",\n      \"guid\": \"" << scene.guid(entity) << "\"";
 
         if (name) {
             output << ",\n      \"name\": {\n";
@@ -1171,8 +1172,9 @@ bool loadSceneFromJson(Scene& scene, ResourceManager& resources, const std::stri
         return false;
     }
 
-    scene.clear();
-
+    // Load into a temporary Scene. An invalid or duplicate GUID must not
+    // destroy the currently edited document.
+    Scene loaded;
     std::unordered_map<Entity, Entity> entityMap;
     for (const JsonValue& entityObject : entities->array) {
         if (entityObject.type != JsonValue::Type::Object) {
@@ -1180,9 +1182,20 @@ bool loadSceneFromJson(Scene& scene, ResourceManager& resources, const std::stri
         }
 
         const Entity oldEntity = readEntityField(entityObject, "id", entityMap.size());
-        const Entity newEntity = scene.createEntity();
+        if (entityMap.find(oldEntity) != entityMap.end()) {
+            error = path + ": duplicate legacy entity id.";
+            return false;
+        }
+        const Entity newEntity = loaded.createEntity();
+        if (const JsonValue* id = objectField(entityObject, "guid")) {
+            if (id->type != JsonValue::Type::String ||
+                !loaded.setEntityGuid(newEntity, id->string)) {
+                error = path + ": invalid or duplicate entity GUID.";
+                return false;
+            }
+        }
         entityMap[oldEntity] = newEntity;
-        applyEntityComponents(scene, resources, newEntity, entityObject);
+        applyEntityComponents(loaded, resources, newEntity, entityObject);
     }
 
     Camera camera{0.0f, 0.0f, 1.0f, 1.0f, InvalidEntity};
@@ -1196,12 +1209,13 @@ bool loadSceneFromJson(Scene& scene, ResourceManager& resources, const std::stri
         const auto mappedTarget = entityMap.find(oldTarget);
         camera.target = mappedTarget != entityMap.end() ? mappedTarget->second : InvalidEntity;
     }
-    scene.setCamera(camera);
+    loaded.setCamera(camera);
 
     const Entity oldPlayer = readEntityField(root, "playerEntity", InvalidEntity);
     const auto mappedPlayer = entityMap.find(oldPlayer);
-    scene.setPlayerEntity(mappedPlayer != entityMap.end() ? mappedPlayer->second : InvalidEntity);
+    loaded.setPlayerEntity(mappedPlayer != entityMap.end() ? mappedPlayer->second : InvalidEntity);
 
+    scene = std::move(loaded);
     return true;
 }
 
