@@ -35,21 +35,32 @@ std::string describeActionBindings(const InputAction& action) {
 
 void Engine::renderPlayPausePanel() {
     ImGui::Begin("Engine");
-    ImGui::Text("Simulation: %s", isPlaying ? "Playing" : "Paused");
-
-    if (ImGui::Button(isPlaying ? "Pause" : "Play")) {
-        isPlaying = !isPlaying;
+    ImGui::Text("Mode: %s", playSession.active()
+        ? (isPlaying ? "Play (temporary)" : "Paused (temporary)") : "Edit");
+    if (!playSession.active()) {
+        if (ImGui::Button("Play")) beginPlayMode();
+    } else {
+        if (ImGui::Button("Stop")) stopPlayMode();
+        ImGui::SameLine();
+        if (ImGui::Button(isPlaying ? "Pause" : "Resume")) isPlaying = !isPlaying;
+        ImGui::SameLine();
+        if (!isPlaying && ImGui::Button("Step")) stepPlayMode();
     }
     ImGui::SameLine();
-    if (ImGui::Button("Step")) {
-        inputSystem();
-        spriteAnimationSystem(FixedDeltaTime);
-        physicsSystem.update(scene, eventQueue, FixedDeltaTime, &jobSystem);
-        cameraSystem();
+    if (ImGui::Button("Undo") && !playSession.active()) undoSceneEdit();
+    ImGui::SameLine();
+    if (ImGui::Button("Redo") && !playSession.active()) redoSceneEdit();
+    if (playSession.active()) {
+        ImGui::TextDisabled("Runtime changes are discarded on Stop. Saving is disabled.");
     }
     ImGui::SameLine();
     if (ImGui::Button("Reset Scene")) {
-        initScene();
+        if (playSession.active()) {
+            stopPlayMode();
+            beginPlayMode();
+        } else {
+            initScene();
+        }
     }
 
     if (ImGui::Button("New Empty Scene")) {
