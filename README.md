@@ -54,6 +54,21 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Connected Terrain, Layers and Named Animation Clips
+
+The editor now supports **4-direction terrain autotiling** (16 atlas
+variants), named tilemap layers with independent draw ordering, and
+multiple named sprite-sheet clips (such as Idle, Run, Jump) per animated
+entity. Lua can change clips during gameplay using
+`engine.play_animation("Run")` and inspect the active clip.
+
+Use the Tilemap Painter's **Enable Terrain / Terrain Paint / Terrain Erase**
+controls, **Add Tile Layer** in Scene Hierarchy, and the **Named Animation
+Clips** section of Sprite Animation Timeline.
+
+See [Terrain, Clips & Layers](docs/TERRAIN_CLIPS_LAYERS.md) for exact atlas
+mask ordering, CLI/gameplay examples, compatibility and limitations.
+
 ## Visual Tilemap Painter and Sprite Animation Timeline
 
 The editor now has two dedicated level-authoring windows: a full-size,
