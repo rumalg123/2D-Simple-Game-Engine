@@ -4,6 +4,8 @@
 #include "ECS.h"
 
 #include <vector>
+#include <string>
+#include <unordered_map>
 
 class Scene {
 public:
@@ -30,6 +32,10 @@ public:
     Entity entityCount() const;
     Entity livingEntityCount() const;
     bool isValidEntity(Entity entity) const;
+    // GUID is a serialized identity; Entity remains a transient index.
+    const std::string& guid(Entity entity) const;
+    Entity findEntityByGuid(const std::string& guid) const;
+    bool setEntityGuid(Entity entity, const std::string& guid);
     Entity findEntityByName(const std::string& name) const;
     Entity findEntityByTag(const std::string& tag) const;
     std::vector<Entity> findEntitiesByTag(const std::string& tag) const;
@@ -117,6 +123,8 @@ private:
 
     Entity nextEntity = 0;
     std::vector<bool> alive;
+    std::vector<std::string> entityGuids;
+    std::unordered_map<std::string, Entity> guidToEntity;
     ComponentPool<NameComponent> names;
     ComponentPool<TagComponent> tags;
     ComponentPool<TransformComponent> transforms;
