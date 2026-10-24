@@ -235,6 +235,9 @@ add_test(NAME tilemap_animation_tests COMMAND tilemap_animation_tests)
 add_executable(terrain_clip_tests tests/TerrainClipTests.cpp)
 target_link_libraries(terrain_clip_tests PRIVATE se_runtime)
 add_test(NAME terrain_clip_tests COMMAND terrain_clip_tests)
+add_test(NAME terrain_demo_project_validate
+    COMMAND simpleengine_project validate
+        "${CMAKE_SOURCE_DIR}/examples/terrain-clip-demo")
 
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
