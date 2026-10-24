@@ -230,6 +230,12 @@ add_executable(tilemap_animation_tests tests/TilemapAnimationTests.cpp)
 target_link_libraries(tilemap_animation_tests PRIVATE se_runtime)
 add_test(NAME tilemap_animation_tests COMMAND tilemap_animation_tests)
 
+# Scene format compatibility, four-neighbor terrain adjacency,
+# multi-entity tile layers and named sprite clip lifetime/serialization.
+add_executable(terrain_clip_tests tests/TerrainClipTests.cpp)
+target_link_libraries(terrain_clip_tests PRIVATE se_runtime)
+add_test(NAME terrain_clip_tests COMMAND terrain_clip_tests)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
