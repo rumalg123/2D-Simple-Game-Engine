@@ -108,12 +108,46 @@ bool ProjectManager::create(const std::filesystem::path& parent,
         "red": 0.95, "green": 0.95, "blue": 1.0, "alpha": 1.0,
         "layer": 100,
         "screenSpace": false
+      },
+      "script": {
+        "scriptName": "WelcomeController",
+        "active": true,
+        "elapsedTime": 0,
+        "parameters": {"speed": 1.5}
       }
     }
   ]
 })SCENE";
         scene.close();
         if (!scene) { error = "Could not finish writing the starter scene."; break; }
+
+        // This playable example uses the same Lua API as user-authored games.
+        std::ofstream lua(root / "Assets/Scripts/WelcomeController.lua",
+                          std::ios::binary | std::ios::trunc);
+        if (!lua) { error = "Cannot create starter Lua script."; break; }
+        lua << R"LUA(-- SimpleEngine Lua gameplay script.
+-- Scripts run in an isolated per-entity Lua state.
+local timer = 0
+
+function on_start()
+    engine.log("WelcomeController started")
+end
+
+function on_update(dt)
+    timer = timer + dt
+    local speed = engine.get_float("speed", 1.5)
+    local x = -0.58 + 0.10 * math.sin(timer * speed)
+    engine.set_position(x, 0.0)
+    if engine.input_down("MoveLeft") then
+        engine.translate(-speed * dt, 0)
+    end
+    if engine.input_down("MoveRight") then
+        engine.translate(speed * dt, 0)
+    end
+end
+)LUA";
+        lua.close();
+        if (!lua) { error = "Could not finish writing starter Lua script."; break; }
 
         std::ofstream output(root / ManifestName, std::ios::binary | std::ios::trunc);
         if (!output) { error = "Cannot write project manifest."; break; }
