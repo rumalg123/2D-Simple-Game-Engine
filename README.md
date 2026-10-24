@@ -21,6 +21,21 @@ SimpleEngine is a small C++17 2D engine prototype with an ImGui editor, ECS scen
 OpenGL sprite rendering, simple AABB physics, prefabs, JSON scene save/load, and a game hook
 interface.
 
+## Independent editor and scene player
+
+`SimpleEngineEditor.exe` launches the visual editor; `SimpleEnginePlayer.exe`
+runs serialized scenes without linking Dear ImGui. These targets are built
+alongside the existing `engine.exe`, Snake, Flappy Bird and starter executables.
+
+```powershell
+.\build\SimpleEngineEditor.exe --config .\demo.game.json
+.\build\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
+```
+
+See [Standalone Editor and Player](docs/EDITOR_PLAYER.md) for configuration,
+architecture, examples, release downloads and current limitations. A visual
+project manager and user-authored scripting remain future work.
+
 ## Build
 
 ```powershell
