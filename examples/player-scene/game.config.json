@@ -1,0 +1,12 @@
+{
+  "windowTitle": "SimpleEngine Player - Welcome Scene",
+  "windowWidth": 960,
+  "windowHeight": 540,
+  "editorEnabled": false,
+  "startPlaying": true,
+  "hotReload": false,
+  "vsync": true,
+  "assetRoot": "assets",
+  "prefabDirectory": "assets/prefabs",
+  "startupScene": "assets/scenes/welcome.scene.json"
+}

@@ -138,6 +138,40 @@ target_include_directories(engine PRIVATE
 
 target_link_libraries(engine PRIVATE engine_core)
 
+# The standalone player compiles Engine.cpp in an editor-free mode.
+# Do not link engine_core or se_editor here: the player must not depend on
+# Dear ImGui or the editor panels, even indirectly.
+add_library(se_player_core STATIC src/Engine.cpp)
+target_compile_definitions(se_player_core PRIVATE SIMPLEENGINE_PLAYER_ONLY=1)
+target_include_directories(se_player_core PUBLIC
+    include
+    include/engine
+)
+target_link_libraries(se_player_core PUBLIC se_runtime)
+add_library(SimpleEngine::PlayerCore ALIAS se_player_core)
+
+add_executable(SimpleEnginePlayer src/player/PlayerMain.cpp)
+target_link_libraries(SimpleEnginePlayer PRIVATE se_player_core)
+
+# The editor keeps the original game/demo code and links the editor facade.
+add_executable(SimpleEngineEditor
+    src/editor/EditorMain.cpp
+    src/DemoScene.cpp
+    src/DemoGame.cpp
+)
+target_link_libraries(SimpleEngineEditor PRIVATE engine_core)
+
+add_test(NAME standalone_player_help COMMAND SimpleEnginePlayer --help)
+add_test(NAME standalone_editor_help COMMAND SimpleEngineEditor --help)
+
+# Test project/scene loading headlessly using the runtime library only.
+add_executable(player_scene_tests tests/PlayerSceneTests.cpp)
+target_link_libraries(player_scene_tests PRIVATE se_runtime)
+add_test(NAME player_scene_data COMMAND player_scene_tests
+    "${CMAKE_SOURCE_DIR}/examples/player-scene/game.config.json"
+    "${CMAKE_SOURCE_DIR}/examples/player-scene/assets/scenes/welcome.scene.json"
+)
+
 add_executable(engine_tests
     tests/EngineCoreTests.cpp
 )

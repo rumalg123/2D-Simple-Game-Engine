@@ -39,7 +39,7 @@ jobs:
           set -euo pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel 2
-          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project snake_sample flappy_bird_sample basic_game_template; do
+          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
             test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
           done
 
@@ -60,9 +60,18 @@ jobs:
               copy_runtime_deps "${dependency}"
             done < <(objdump -p "${binary}" | awk '/DLL Name:/ { print $3 }')
           }
-          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project snake_sample flappy_bird_sample basic_game_template; do
+          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
             copy_runtime_deps "build/${target}.exe"
           done
+
+      - name: Verify the player does not contain editor symbols
+        shell: msys2 {0}
+        run: |
+          set -euo pipefail
+          if nm -C build/SimpleEnginePlayer.exe | grep -E 'ImGui::|ImGui_Impl'; then
+            echo "SimpleEnginePlayer must not link Dear ImGui."
+            exit 1
+          fi
 
       - name: Run all tests, including packaging smoke test
         shell: msys2 {0}

@@ -74,6 +74,18 @@ The extraction should be checked with a native Windows build before merging.
 Moving methods between translation units alone does not prove final linker and
 GUI functionality.
 
+## Standalone editor/player application milestone
+
+Two dedicated executable targets are now available: `SimpleEngineEditor`
+links the editor facade, while `SimpleEnginePlayer` compiles the same
+`Engine.cpp` with `SIMPLEENGINE_PLAYER_ONLY` and links only `se_runtime`.
+The player uses a serialized startup scene, and PR CI checks that no Dear
+ImGui symbols enter its executable. The original engine/game targets remain.
+
+See [Standalone Editor and Player](EDITOR_PLAYER.md) for commands and
+limitations. This is a transitional compile-time split; fully independent
+editor context/commands and project-based gameplay are still future phases.
+
 ## Follow-up milestones
 
 1. Replace direct `Engine` private-state access in editor components

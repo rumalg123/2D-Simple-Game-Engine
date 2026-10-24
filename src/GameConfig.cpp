@@ -294,6 +294,7 @@ bool loadGameConfigFromFile(const std::string& path, GameConfig& config, std::st
         !readBool(values, "startPlaying", parsed.startPlaying, error) ||
         !readBool(values, "hotReload", parsed.hotReload, error) ||
         !readBool(values, "vsync", parsed.vsync, error) ||
+        !readString(values, "startupScene", parsed.startupScene, error) ||
         !readString(values, "assetRoot", parsed.assetRoot, error) ||
         !readString(values, "prefabDirectory", parsed.prefabDirectory, error) ||
         !readString(values, "editorLayoutPath", parsed.editorLayoutPath, error)) {

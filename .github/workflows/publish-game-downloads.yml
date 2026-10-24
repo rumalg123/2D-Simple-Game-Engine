@@ -45,7 +45,7 @@ jobs:
           set -euo pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel 2
-          for target in engine snake_sample flappy_bird_sample basic_game_template engine_tests; do
+          for target in engine snake_sample flappy_bird_sample basic_game_template engine_tests runtime_boundary_tests player_scene_tests SimpleEngineEditor SimpleEnginePlayer; do
             test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
           done
 
@@ -71,7 +71,7 @@ jobs:
             done < <(objdump -p "${binary}" | awk '/DLL Name:/ { print $3 }')
           }
 
-          for target in engine snake_sample flappy_bird_sample basic_game_template; do
+          for target in engine snake_sample flappy_bird_sample basic_game_template SimpleEngineEditor SimpleEnginePlayer; do
             copy_runtime_deps "build/${target}.exe"
           done
           find build -maxdepth 1 -name '*.dll' -print
@@ -89,6 +89,8 @@ jobs:
 
           $packages = @(
             @{ Name = 'SimpleEngine-Windows-x64'; Exe = 'engine.exe'; Config = 'demo.game.json'; Assets = 'assets'; Readme = 'README.md'; Missing = $false }
+            @{ Name = 'SimpleEngineEditor-Windows-x64'; Exe = 'SimpleEngineEditor.exe'; Config = 'demo.game.json'; Assets = 'assets'; Readme = 'README.md'; Missing = $false; Mode = 'editor' }
+            @{ Name = 'SimpleEnginePlayer-Windows-x64'; Exe = 'SimpleEnginePlayer.exe'; Config = 'examples/player-scene/game.config.json'; Assets = 'examples/player-scene/assets'; Readme = 'examples/player-scene/README.md'; Missing = $false; Mode = 'player' }
             @{ Name = 'SnakeSample-Windows-x64'; Exe = 'snake_sample.exe'; Config = 'samples/snake/snake.game.json'; Assets = 'samples/snake/assets'; Readme = 'samples/snake/README.md'; Missing = $true }
             @{ Name = 'FlappyBirdSample-Windows-x64'; Exe = 'flappy_bird_sample.exe'; Config = 'samples/flappy_bird/flappy_bird.game.json'; Assets = 'samples/flappy_bird/assets'; Readme = 'samples/flappy_bird/README.md'; Missing = $true }
             @{ Name = 'BasicGameTemplate-Windows-x64'; Exe = 'basic_game_template.exe'; Config = 'templates/basic_game/basic_game.game.json'; Assets = 'templates/basic_game/assets'; Readme = 'templates/basic_game/README.md'; Missing = $true }
@@ -104,6 +106,7 @@ jobs:
               AssetsPath = $package.Assets
               ReadmePath = $package.Readme
               AllowMissingAssets = $package.Missing
+              LaunchMode = if ($package.ContainsKey('Mode')) { $package.Mode } else { 'runtime' }
               SkipBuild = $true
             }
             & ./tools/package.ps1 @options
@@ -117,8 +120,8 @@ jobs:
           & ./tools/package-game-files.ps1 -OutputDir 'dist'
 
           $archives = @(Get-ChildItem -LiteralPath 'dist' -Filter '*.zip' -File | Sort-Object Name)
-          if ($archives.Count -ne 5) {
-            throw "Expected five ZIP assets, found $($archives.Count)."
+          if ($archives.Count -ne 7) {
+            throw "Expected seven ZIP assets, found $($archives.Count)."
           }
 
           $hashes = @($archives | ForEach-Object {
@@ -142,6 +145,8 @@ jobs:
 
           Windows x64 downloads:
           - SimpleEngine-Windows-x64.zip: demo/editor application
+          - SimpleEngineEditor-Windows-x64.zip: standalone editor executable
+          - SimpleEnginePlayer-Windows-x64.zip: editor-free player with a sample JSON scene
           - SnakeSample-Windows-x64.zip: standalone Snake game
           - FlappyBirdSample-Windows-x64.zip: standalone Flappy Bird game
           - BasicGameTemplate-Windows-x64.zip: standalone starter game
@@ -150,7 +155,8 @@ jobs:
           - GameFiles.zip: source game files, configurations, and original assets
           - SHA256SUMS.txt: SHA-256 checksums for the ZIP files
 
-          To run a Windows game, extract its ZIP and double-click launch.bat.
+          To run a Windows game or editor, extract the desired ZIP and double-click launch.bat.
+          The new player opens a serialized static scene; user-authored scripting is not yet supported.
           The standalone ZIPs already include required game assets and runtime DLLs.
           The separate GameFiles.zip is optional.
           Linux/macOS executables are not published because the engine currently
@@ -162,8 +168,8 @@ jobs:
             Sort-Object Name |
             ForEach-Object { $_.FullName })
 
-          if ($assets.Count -ne 6) {
-            throw "Expected six release assets, found $($assets.Count)."
+          if ($assets.Count -ne 8) {
+            throw "Expected eight release assets, found $($assets.Count)."
           }
 
           gh release create $tag @assets --target $env:GITHUB_SHA --title "Game downloads #$env:GITHUB_RUN_NUMBER" --notes $releaseNotes --latest

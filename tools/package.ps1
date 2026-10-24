@@ -7,6 +7,8 @@ param(
     [string]$BuildTarget = "",
     [string]$GameConfig = "demo.game.json",
     [string]$PackageConfigName = "game.config.json",
+    [ValidateSet("runtime", "editor", "player")]
+    [string]$LaunchMode = "runtime",
     [string]$AssetsPath = "assets",
     [string]$ReadmePath = "README.md",
     [switch]$AllowMissingAssets,
@@ -120,7 +122,12 @@ if ($ResolvedReadmePath -and (Test-Path -LiteralPath $ResolvedReadmePath)) {
 
 $LaunchCommand = "`"$ExecutableName`""
 if ($PackagedConfigFileName) {
-    $LaunchCommand = "`"$ExecutableName`" --config `"$PackagedConfigFileName`" --runtime"
+    $ModeArgument = switch ($LaunchMode) {
+        "runtime" { " --runtime" }
+        "editor" { " --editor" }
+        "player" { "" }
+    }
+    $LaunchCommand = "`"$ExecutableName`" --config `"$PackagedConfigFileName`"$ModeArgument"
 }
 
 $LaunchBat = @"
