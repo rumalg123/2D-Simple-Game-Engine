@@ -173,6 +173,7 @@ bool Engine::init() {
         return false;
     }
     initPlugins();
+    if (config.editorEnabled && isPlaying) playSession.begin(scene);
     glContext.release();
     renderCommands.start();
     return true;
@@ -315,6 +316,7 @@ bool Engine::initScene() {
     clearGpuTextureCache();
     resources.clear();
     scene.clear();
+    if (!playSession.active()) sceneHistory.clear();
     prefabs.clear();
     if (game) {
         GameContext gameContext = makeGameContext();
@@ -408,7 +410,70 @@ void Engine::hotReloadSystem() {
     syncGpuTextures(false);
 }
 
+void Engine::beginPlayMode() {
+    if (!config.editorEnabled || playSession.active()) return;
+    if (!playSession.begin(scene)) return;
+    physicsSystem.clearContacts();
+    isPlaying = true;
+    editorStatus = "Playing a temporary scene copy. Stop to discard changes.";
+}
+
+void Engine::stopPlayMode() {
+    if (!playSession.active()) return;
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    physicsSystem.clearContacts();
+    isPlaying = false;
+    playSession.stop(scene);
+    if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+    cameraSystem();
+    editorStatus = "Stopped simulation; authored scene restored.";
+}
+
+void Engine::stepPlayMode() {
+    if (!playSession.active() || isPlaying) return;
+    inputSystem();
+    scriptSystem.fixedUpdate(scene, FixedDeltaTime, &prefabs, &inputMap);
+    if (game) {
+        GameContext ctx = makeGameContext();
+        game->onFixedUpdate(ctx, FixedDeltaTime);
+    }
+    spriteAnimationSystem(FixedDeltaTime);
+    PluginContext pluginCtx = makePluginContext();
+    pluginManager.update(pluginCtx, FixedDeltaTime);
+    physicsSystem.update(scene, eventQueue, FixedDeltaTime, &jobSystem);
+    lifetimeSystem(FixedDeltaTime);
+    cameraSystem();
+}
+
+void Engine::recordSceneEdit() {
+    if (config.editorEnabled && !playSession.active()) sceneHistory.record(scene);
+}
+
+void Engine::undoSceneEdit() {
+    if (!config.editorEnabled || playSession.active()) return;
+    if (sceneHistory.undo(scene)) {
+        scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+        physicsSystem.clearContacts();
+        if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+        editorStatus = "Undid scene operation.";
+    }
+}
+
+void Engine::redoSceneEdit() {
+    if (!config.editorEnabled || playSession.active()) return;
+    if (sceneHistory.redo(scene)) {
+        scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+        physicsSystem.clearContacts();
+        if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+        editorStatus = "Redid scene operation.";
+    }
+}
+
 void Engine::saveCurrentScene() {
+    if (playSession.active()) {
+        editorStatus = "Stop Play Mode before saving. Runtime changes are temporary.";
+        return;
+    }
     std::filesystem::create_directories(config.assetRoot);
     const std::string scenePath = config.startupScene.empty()
         ? (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string()
@@ -423,6 +488,8 @@ void Engine::saveCurrentScene() {
 }
 
 bool Engine::loadSceneFromPath(const std::string& scenePath) {
+    if (playSession.active()) stopPlayMode();
+    sceneHistory.clear();
     std::string error;
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     physicsSystem.clearContacts();
@@ -514,6 +581,8 @@ void Engine::reloadPrefabAssets() {
 }
 
 void Engine::newEmptyScene() {
+    if (playSession.active()) stopPlayMode();
+    recordSceneEdit();
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     physicsSystem.clearContacts();
     scene.clear();
@@ -524,6 +593,7 @@ void Engine::newEmptyScene() {
 }
 
 Entity Engine::createEmptyEntity() {
+    recordSceneEdit();
     const Entity entity = scene.createEntity();
     scene.setName(entity, {"Entity " + std::to_string(entity)});
     scene.setTransform(entity, {0.0f, 0.0f});
@@ -533,6 +603,7 @@ Entity Engine::createEmptyEntity() {
 }
 
 Entity Engine::duplicateEntity(Entity source) {
+    if (scene.isValidEntity(source)) recordSceneEdit();
     if (!scene.isValidEntity(source)) {
         editorStatus = "Select a valid entity to duplicate.";
         return InvalidEntity;
@@ -591,6 +662,7 @@ Entity Engine::duplicateEntity(Entity source) {
 }
 
 void Engine::deleteEntity(Entity entity) {
+    if (scene.isValidEntity(entity)) recordSceneEdit();
     if (!scene.isValidEntity(entity)) {
         editorStatus = "Select a valid entity to delete.";
         return;
