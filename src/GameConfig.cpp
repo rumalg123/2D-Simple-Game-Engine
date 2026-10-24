@@ -287,7 +287,8 @@ bool loadGameConfigFromFile(const std::string& path, GameConfig& config, std::st
     }
 
     GameConfig parsed = config;
-    if (!readString(values, "windowTitle", parsed.windowTitle, error) ||
+    if (!readInt(values, "formatVersion", parsed.formatVersion, error) ||
+        !readString(values, "windowTitle", parsed.windowTitle, error) ||
         !readInt(values, "windowWidth", parsed.windowWidth, error) ||
         !readInt(values, "windowHeight", parsed.windowHeight, error) ||
         !readBool(values, "editorEnabled", parsed.editorEnabled, error) ||
