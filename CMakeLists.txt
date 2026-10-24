@@ -212,6 +212,14 @@ add_executable(lua_gameplay_tests tests/LuaGameplayTests.cpp)
 target_link_libraries(lua_gameplay_tests PRIVATE se_runtime)
 add_test(NAME lua_gameplay_tests COMMAND lua_gameplay_tests)
 
+# Validate CLI create → Lua project validation → intentional syntax error.
+add_test(NAME lua_project_cli_smoke
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_TOOL=$<TARGET_FILE:simpleengine_project>
+        -DTEST_DIR=${CMAKE_BINARY_DIR}/lua_project_cli_smoke
+        -P ${CMAKE_SOURCE_DIR}/tests/ProjectCliSmokeTests.cmake
+)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
