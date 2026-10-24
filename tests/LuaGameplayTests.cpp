@@ -118,6 +118,28 @@ end
         require(lua.activeInstanceCount() == 0, "Destroyed scripts leaked Lua states");
         scripts.clear();
 
+        // Runtime errors and infinite loops must not hang the game or spam logs.
+        write(scriptsPath / "Throw.lua",
+              "function on_update(dt) error('deliberate test error') end\\n");
+        write(scriptsPath / "Infinite.lua",
+              "function on_update(dt) while true do end end\\n");
+        LuaScriptRuntime failureLua;
+        ScriptSystem failureScripts;
+        errors.clear();
+        require(failureLua.registerDirectory(failureScripts, scriptsPath, errors) == 3,
+                "Valid scripts should still register alongside invalid scripts");
+        Scene failureScene;
+        const Entity thrower = failureScene.createEntity("Thrower");
+        const Entity infinite = failureScene.createEntity("Infinite");
+        failureScene.setScript(thrower, {"Throw", true, 0});
+        failureScene.setScript(infinite, {"Infinite", true, 0});
+        failureScripts.update(failureScene, 0.016f);
+        require(!failureScene.getScript(thrower)->active &&
+                !failureScene.getScript(infinite)->active,
+                "Failing or looping Lua scripts were not disabled");
+        failureScripts.destroyAll(failureScene);
+        failureScripts.clear();
+
         // Real created projects must already be valid and scriptable end-to-end.
         ProjectInfo project;
         std::string error;
