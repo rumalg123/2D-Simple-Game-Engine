@@ -1,0 +1,12 @@
+{
+  "formatVersion": 1,
+  "windowTitle": "Terrain and Clips Demo",
+  "windowWidth": 1280,
+  "windowHeight": 720,
+  "editorEnabled": true,
+  "startPlaying": false,
+  "assetRoot": "Assets",
+  "prefabDirectory": "Assets/Prefabs",
+  "editorLayoutPath": "ProjectSettings/editor.ini",
+  "startupScene": "Assets/Scenes/Main.scene.json"
+}
