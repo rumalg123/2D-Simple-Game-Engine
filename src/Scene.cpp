@@ -1,11 +1,46 @@
 #include "Scene.h"
 
 #include <stdexcept>
+#include <array>
+#include <random>
+#include <cstdio>
 #include <utility>
+
+namespace {
+std::string newGuid() {
+    // A UUIDv4-format identifier independent of runtime entity indices.
+    static thread_local std::mt19937_64 generator(std::random_device{}());
+    const auto a = generator();
+    const auto b = generator();
+    char value[37]{};
+    std::snprintf(value, sizeof(value), "%08llx-%04llx-%04llx-%04llx-%012llx",
+        static_cast<unsigned long long>(a >> 32),
+        static_cast<unsigned long long>((a >> 16) & 0xffff),
+        static_cast<unsigned long long>((a & 0x0fff) | 0x4000),
+        static_cast<unsigned long long>(((b >> 48) & 0x3fff) | 0x8000),
+        static_cast<unsigned long long>(b & 0xffffffffffffULL));
+    return value;
+}
+bool validGuid(const std::string& id) {
+    if (id.size() != 36) return false;
+    for (std::size_t i = 0; i < id.size(); ++i) {
+        if (i == 8 || i == 13 || i == 18 || i == 23) {
+            if (id[i] != '-') return false;
+        } else if (!((id[i] >= '0' && id[i] <= '9') ||
+                     (id[i] >= 'a' && id[i] <= 'f') ||
+                     (id[i] >= 'A' && id[i] <= 'F'))) {
+            return false;
+        }
+    }
+    return true;
+}
+}
 
 void Scene::clear() {
     nextEntity = 0;
     alive.clear();
+    entityGuids.clear();
+    guidToEntity.clear();
     names.clear();
     tags.clear();
     transforms.clear();
@@ -26,6 +61,10 @@ void Scene::clear() {
 Entity Scene::createEntity() {
     const Entity entity = nextEntity++;
     alive.push_back(true);
+    auto guidValue = newGuid();
+    while (guidToEntity.find(guidValue) != guidToEntity.end()) guidValue = newGuid();
+    entityGuids.push_back(guidValue);
+    guidToEntity.emplace(guidValue, entity);
     reserveComponentSlots();
     return entity;
 }
@@ -95,6 +134,8 @@ void Scene::destroyEntity(Entity entity) {
     scripts.remove(entity);
     lifetimes.remove(entity);
     alive[entity] = false;
+    guidToEntity.erase(entityGuids[entity]);
+    entityGuids[entity].clear();
 
     if (playerEntity == entity) {
         playerEntity = InvalidEntity;
@@ -121,6 +162,27 @@ Entity Scene::livingEntityCount() const {
 
 bool Scene::isValidEntity(Entity entity) const {
     return entity < alive.size() && alive[entity];
+}
+
+const std::string& Scene::guid(Entity entity) const {
+    static const std::string empty;
+    return isValidEntity(entity) ? entityGuids[entity] : empty;
+}
+
+Entity Scene::findEntityByGuid(const std::string& id) const {
+    const auto entry = guidToEntity.find(id);
+    return entry != guidToEntity.end() && isValidEntity(entry->second)
+        ? entry->second : InvalidEntity;
+}
+
+bool Scene::setEntityGuid(Entity entity, const std::string& id) {
+    if (!isValidEntity(entity) || !validGuid(id)) return false;
+    const auto found = guidToEntity.find(id);
+    if (found != guidToEntity.end() && found->second != entity) return false;
+    guidToEntity.erase(entityGuids[entity]);
+    entityGuids[entity] = id;
+    guidToEntity[id] = entity;
+    return true;
 }
 
 Entity Scene::findEntityByName(const std::string& name) const {
