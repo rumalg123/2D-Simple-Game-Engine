@@ -16,7 +16,11 @@ void Engine::renderAnimationTimelinePanel() {
     auto& animation = *scene.getSpriteAnimation(selectedEntity);
     const bool editable = !playSession.active();
     if(!editable) ImGui::TextDisabled("Preview is read-only during Play Mode.");
-    if(editable) AnimationTools::normalize(animation);
+    if(editable) {
+        AnimationTools::normalize(animation);
+        if (animation.playing) AnimationTools::advance(
+            animation, ImGui::GetIO().DeltaTime);
+    }
     const int total=std::max(1,animation.columns)*std::max(1,animation.rows);
     ImGui::Text("Sprite sheet: %d columns x %d rows (%d frames)",
                 animation.columns,animation.rows,total);
@@ -36,7 +40,6 @@ void Engine::renderAnimationTimelinePanel() {
         animation.playing=false;
         AnimationTools::step(animation,1);
     }
-    const int oldFrame=animation.currentFrame;
     ImGui::BeginDisabled(!editable);
     if(ImGui::SliderInt("Timeline Frame",&animation.currentFrame,
                         0,std::max(0,animation.frameCount-1))) {
@@ -72,7 +75,7 @@ void Engine::renderAnimationTimelinePanel() {
                 uv.uMin,uv.vMin,uv.uMax,uv.vMax);
     // Scrubbing in Edit Mode must immediately update the sprite UVs; otherwise
     // previews would only change after the next simulation tick.
-    if(oldFrame != animation.currentFrame && editable) {
+    if(editable) {
         if(SpriteComponent* sprite=scene.getSprite(selectedEntity)) {
             sprite->uMin=uv.uMin;sprite->vMin=uv.vMin;
             sprite->uMax=uv.uMax;sprite->vMax=uv.vMax;
