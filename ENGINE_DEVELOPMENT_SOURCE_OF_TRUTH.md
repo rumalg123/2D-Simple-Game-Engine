@@ -30,6 +30,12 @@ Status values:
 - **Planned next:** Introduce `EditorContext`, then independently linked
   editor/player applications with no ImGui library in the player.
 - Details: [Runtime/editor build boundaries](docs/BUILD_BOUNDARIES.md).
+- **In Progress:** Independently linked `SimpleEngineEditor` and editor-free
+  `SimpleEnginePlayer` applications, with optional `startupScene` loading
+  and a portable serialized scene example.
+- **Next player milestone:** Connect the now-merged `ProjectManager` manifests
+  to editor project opening and player startup.
+- Details: [Standalone editor and player](docs/EDITOR_PLAYER.md).
 
 ## Independent Project Foundation (In Progress)
 
