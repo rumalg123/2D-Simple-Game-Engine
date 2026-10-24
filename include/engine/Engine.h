@@ -19,6 +19,7 @@
 #include "Renderer.h"
 #include "ResourceManager.h"
 #include "Scene.h"
+#include "SceneEditSession.h"
 #include "ScriptSystem.h"
 #include <cstddef>
 #include <memory>
@@ -42,6 +43,8 @@ private:
     ResourceManager resources;
     AssetManifest assetManifest;
     Scene scene;
+    SceneEditSession playSession;
+    SceneHistory sceneHistory;
     EventQueue eventQueue;
     PrefabRegistry prefabs;
     ScriptSystem scriptSystem;
@@ -71,6 +74,12 @@ private:
     bool loadSceneFromPath(const std::string& scenePath);
     void initAssetManifest();
     bool initScene();
+    void beginPlayMode();
+    void stopPlayMode();
+    void stepPlayMode();
+    void undoSceneEdit();
+    void redoSceneEdit();
+    void recordSceneEdit();
     void initInputMap();
     void initScripts();
     void initPlugins();

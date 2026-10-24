@@ -27,6 +27,18 @@ void Engine::renderInspectorPanel() {
     }
 
     ImGui::Text("Entity %zu", selectedEntity);
+    ImGui::TextWrapped("GUID: %s", scene.guid(selectedEntity).c_str());
+    if (ImGui::SmallButton("Copy GUID")) {
+        ImGui::SetClipboardText(scene.guid(selectedEntity).c_str());
+    }
+    ImGui::SameLine();
+    if (ImGui::SmallButton("Undo checkpoint") && !playSession.active()) {
+        recordSceneEdit();
+        editorStatus = "Recorded undo checkpoint for inspector edits.";
+    }
+    if (playSession.active()) {
+        ImGui::TextDisabled("Play mode: changes to this entity will be discarded on Stop.");
+    }
 
     NameComponent* name = scene.getName(selectedEntity);
     TagComponent* tag = scene.getTag(selectedEntity);
@@ -43,6 +55,7 @@ void Engine::renderInspectorPanel() {
     LifetimeComponent* lifetime = scene.getLifetime(selectedEntity);
 
     if (ImGui::Button("Set Player")) {
+        recordSceneEdit();
         scene.setPlayerEntity(selectedEntity);
         scene.setTag(selectedEntity, {"Player"});
         tag = scene.getTag(selectedEntity);
@@ -50,6 +63,7 @@ void Engine::renderInspectorPanel() {
     }
     ImGui::SameLine();
     if (ImGui::Button("Set Camera Target")) {
+        recordSceneEdit();
         Camera camera = scene.getCamera();
         camera.target = selectedEntity;
         scene.setCamera(camera);
@@ -74,30 +88,37 @@ void Engine::renderInspectorPanel() {
 
     ImGui::SeparatorText("Add Components");
     if (!name && ImGui::Button("Add Name")) {
+        recordSceneEdit();
         scene.setName(selectedEntity, {"Entity " + std::to_string(selectedEntity)});
         name = scene.getName(selectedEntity);
     }
     if (!tag && ImGui::Button("Add Tag")) {
+        recordSceneEdit();
         scene.setTag(selectedEntity, {"Untagged"});
         tag = scene.getTag(selectedEntity);
     }
     if (!transform && ImGui::Button("Add Transform")) {
+        recordSceneEdit();
         scene.setTransform(selectedEntity, {0.0f, 0.0f});
         transform = scene.getTransform(selectedEntity);
     }
     if (!sprite && ImGui::Button("Add Sprite")) {
+        recordSceneEdit();
         scene.setSprite(selectedEntity, {0.10f, 0.10f, 1.0f, 1.0f, 1.0f, 1.0f, 10, getEditorDefaultTexture()});
         sprite = scene.getSprite(selectedEntity);
     }
     if (!spriteAnimation && ImGui::Button("Add Sprite Animation")) {
+        recordSceneEdit();
         scene.setSpriteAnimation(selectedEntity, {4, 1, 0, 4, 0, 0.10f, 0.0f, true, true});
         spriteAnimation = scene.getSpriteAnimation(selectedEntity);
     }
     if (!text && ImGui::Button("Add Text")) {
+        recordSceneEdit();
         scene.setText(selectedEntity, {"TEXT", 0.08f, 0.12f, 0.02f, 0.04f, 1.0f, 1.0f, 1.0f, 1.0f, 100, true});
         text = scene.getText(selectedEntity);
     }
     if (!tilemap && ImGui::Button("Add Tilemap")) {
+        recordSceneEdit();
         scene.setTilemap(
             selectedEntity,
             {8, 8, 0.16f, 0.16f, 1, 1, -100, getEditorDefaultTexture(), 1.0f, 1.0f, 1.0f, 1.0f,
@@ -105,26 +126,32 @@ void Engine::renderInspectorPanel() {
         tilemap = scene.getTilemap(selectedEntity);
     }
     if (!physics && ImGui::Button("Add Physics")) {
+        recordSceneEdit();
         scene.setPhysics(selectedEntity, {0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, false, false, false});
         physics = scene.getPhysics(selectedEntity);
     }
     if (!collider && ImGui::Button("Add Collider")) {
+        recordSceneEdit();
         scene.setCollider(selectedEntity, {0.10f, 0.10f, true, false});
         collider = scene.getCollider(selectedEntity);
     }
     if (!entityBounds && ImGui::Button("Add Bounds")) {
+        recordSceneEdit();
         scene.setBounds(selectedEntity, {-1.0f, 1.0f, -1.0f, 1.0f});
         entityBounds = scene.getBounds(selectedEntity);
     }
     if (!input && ImGui::Button("Add Input")) {
+        recordSceneEdit();
         scene.setInput(selectedEntity, {true, "MoveLeft", "MoveRight", "MoveUp", "MoveDown", 6.0f});
         input = scene.getInput(selectedEntity);
     }
     if (!script && ImGui::Button("Add Script")) {
+        recordSceneEdit();
         scene.setScript(selectedEntity, {"", true, 0.0f});
         script = scene.getScript(selectedEntity);
     }
     if (!lifetime && ImGui::Button("Add Lifetime")) {
+        recordSceneEdit();
         scene.setLifetime(selectedEntity, {5.0f});
         lifetime = scene.getLifetime(selectedEntity);
     }
@@ -132,6 +159,7 @@ void Engine::renderInspectorPanel() {
     if (name && ImGui::CollapsingHeader("Name", ImGuiTreeNodeFlags_DefaultOpen)) {
         editStringField("Display Name", name->name);
         if (ImGui::Button("Remove Name")) {
+            recordSceneEdit();
             scene.getNamePool().remove(selectedEntity);
             name = nullptr;
         }
@@ -140,6 +168,7 @@ void Engine::renderInspectorPanel() {
     if (tag && ImGui::CollapsingHeader("Tag")) {
         editStringField("Tag", tag->tag);
         if (ImGui::Button("Remove Tag")) {
+            recordSceneEdit();
             scene.getTagPool().remove(selectedEntity);
             tag = nullptr;
         }
@@ -149,6 +178,7 @@ void Engine::renderInspectorPanel() {
         ImGui::DragFloat("X", &transform->x, 0.01f);
         ImGui::DragFloat("Y", &transform->y, 0.01f);
         if (ImGui::Button("Remove Transform")) {
+            recordSceneEdit();
             scene.getTransformPool().remove(selectedEntity);
             transform = nullptr;
         }
@@ -174,6 +204,7 @@ void Engine::renderInspectorPanel() {
             sprite->texture = getEditorDefaultTexture();
         }
         if (ImGui::Button("Remove Sprite")) {
+            recordSceneEdit();
             scene.getSpritePool().remove(selectedEntity);
             sprite = nullptr;
         }
@@ -195,6 +226,7 @@ void Engine::renderInspectorPanel() {
             spriteAnimation->playing = true;
         }
         if (ImGui::Button("Remove Sprite Animation")) {
+            recordSceneEdit();
             scene.getSpriteAnimationPool().remove(selectedEntity);
             spriteAnimation = nullptr;
         }
@@ -210,6 +242,7 @@ void Engine::renderInspectorPanel() {
         ImGui::InputInt("Text Layer", &text->layer);
         ImGui::Checkbox("Screen Space", &text->screenSpace);
         if (ImGui::Button("Remove Text")) {
+            recordSceneEdit();
             scene.getTextPool().remove(selectedEntity);
             text = nullptr;
         }
@@ -293,6 +326,7 @@ void Engine::renderInspectorPanel() {
         ImGui::PopItemWidth();
 
         if (ImGui::Button("Remove Tilemap")) {
+            recordSceneEdit();
             scene.getTilemapPool().remove(selectedEntity);
             tilemap = nullptr;
         }
@@ -310,6 +344,7 @@ void Engine::renderInspectorPanel() {
         ImGui::Checkbox("Use World Bounds", &physics->usesWorldBounds);
         ImGui::Checkbox("Bounce At Bounds", &physics->bounceAtBounds);
         if (ImGui::Button("Remove Physics")) {
+            recordSceneEdit();
             scene.getPhysicsPool().remove(selectedEntity);
             physics = nullptr;
         }
@@ -329,6 +364,7 @@ void Engine::renderInspectorPanel() {
             collider->mask = static_cast<unsigned int>(mask);
         }
         if (ImGui::Button("Remove Collider")) {
+            recordSceneEdit();
             scene.getColliderPool().remove(selectedEntity);
             collider = nullptr;
         }
@@ -340,6 +376,7 @@ void Engine::renderInspectorPanel() {
         ImGui::DragFloat("Min Y", &entityBounds->minY, 0.01f);
         ImGui::DragFloat("Max Y", &entityBounds->maxY, 0.01f);
         if (ImGui::Button("Remove Bounds")) {
+            recordSceneEdit();
             scene.getBoundsPool().remove(selectedEntity);
             entityBounds = nullptr;
         }
@@ -353,6 +390,7 @@ void Engine::renderInspectorPanel() {
         editStringField("Up Action", input->moveUpAction);
         editStringField("Down Action", input->moveDownAction);
         if (ImGui::Button("Remove Input")) {
+            recordSceneEdit();
             scene.getInputPool().remove(selectedEntity);
             input = nullptr;
         }
@@ -427,6 +465,7 @@ void Engine::renderInspectorPanel() {
         }
 
         if (ImGui::Button("Remove Script")) {
+            recordSceneEdit();
             scene.getScriptPool().remove(selectedEntity);
             script = nullptr;
         }
@@ -435,6 +474,7 @@ void Engine::renderInspectorPanel() {
     if (lifetime && ImGui::CollapsingHeader("Lifetime")) {
         ImGui::DragFloat("Remaining Seconds", &lifetime->remainingSeconds, 0.05f, 0.0f, 60.0f);
         if (ImGui::Button("Remove Lifetime")) {
+            recordSceneEdit();
             scene.getLifetimePool().remove(selectedEntity);
             lifetime = nullptr;
         }
