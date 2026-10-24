@@ -347,15 +347,49 @@ void Engine::initInputMap() {
     if (game) {
         GameContext gameContext = makeGameContext();
         game->configureInput(gameContext);
+    } else {
+        // Default project mappings allow Lua scripts to work without C++ setup.
+        inputMap.bindAction("MoveLeft", GLFW_KEY_A);
+        inputMap.bindKey("MoveLeft", GLFW_KEY_LEFT);
+        inputMap.bindAction("MoveRight", GLFW_KEY_D);
+        inputMap.bindKey("MoveRight", GLFW_KEY_RIGHT);
+        inputMap.bindAction("MoveUp", GLFW_KEY_W);
+        inputMap.bindKey("MoveUp", GLFW_KEY_UP);
+        inputMap.bindAction("MoveDown", GLFW_KEY_S);
+        inputMap.bindKey("MoveDown", GLFW_KEY_DOWN);
     }
 }
 
 void Engine::initScripts() {
-    scriptSystem.clear();
+    scriptSystem.clear(); // Drop callbacks before disposing their Lua owner.
+    luaRuntime.reset();
     if (game) {
         GameContext gameContext = makeGameContext();
         game->registerScripts(gameContext);
     }
+
+    luaRuntime = std::make_unique<LuaScriptRuntime>();
+    std::vector<std::string> errors;
+    const auto directory = std::filesystem::path(config.assetRoot) / "Scripts";
+    const std::size_t count = luaRuntime->registerDirectory(scriptSystem, directory, errors);
+    if (!errors.empty()) {
+        for (const std::string& error : errors) {
+            std::cerr << "[Lua] " << error << '\n';
+        }
+        editorStatus = "Some Lua scripts failed validation. See console.";
+    } else if (count > 0) {
+        editorStatus = "Registered " + std::to_string(count) + " Lua script(s).";
+    }
+}
+
+void Engine::reloadLuaScripts() {
+    if (playSession.active()) {
+        editorStatus = "Stop simulation before reloading Lua scripts.";
+        return;
+    }
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
+    initScripts();
+    editorStatus = "Lua scripts reloaded. Run Play to test them.";
 }
 
 void Engine::initAssetManifest() {
@@ -1106,6 +1140,8 @@ void Engine::cleanup() {
     physicsSystem.clearContacts();
     PluginContext pluginContext = makePluginContext();
     pluginManager.unloadAll(pluginContext);
+    scriptSystem.clear();
+    luaRuntime.reset();
     jobSystem.stop();
     renderCommands.stop();
     renderCommands.clear();
