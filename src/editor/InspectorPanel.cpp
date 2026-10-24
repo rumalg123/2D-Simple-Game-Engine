@@ -431,10 +431,14 @@ void Engine::renderInspectorPanel() {
                 float& value = script->parameters[parameter.name];
                 ImGui::DragFloat(parameter.name.c_str(), &value, 0.01f, parameter.minValue, parameter.maxValue);
             }
+        }
 
+        // Lua scripts do not require C++ parameter definitions. Show all
+        // serialized numeric script parameters in the Inspector.
+        {
             std::vector<std::string> customParameters;
             for (const auto& parameter : script->parameters) {
-                const bool defined = std::any_of(
+                const bool defined = parameterDefinitions && std::any_of(
                     parameterDefinitions->begin(),
                     parameterDefinitions->end(),
                     [&parameter](const ScriptParameterDefinition& definition) {
@@ -459,7 +463,23 @@ void Engine::renderInspectorPanel() {
                     ImGui::PopID();
                 }
                 if (!parameterToRemove.empty()) {
+                    recordSceneEdit();
                     script->parameters.erase(parameterToRemove);
+                }
+            }
+
+            static char parameterName[64] = "speed";
+            ImGui::InputText("New Numeric Parameter", parameterName,
+                             sizeof(parameterName));
+            if (ImGui::Button("Add Numeric Parameter")) {
+                const std::string name(parameterName);
+                if (!name.empty() && name.find_first_not_of(
+                        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_") ==
+                        std::string::npos) {
+                    recordSceneEdit();
+                    script->parameters.emplace(name, 0.0f);
+                } else {
+                    editorStatus = "Parameter names may contain only letters, digits and underscores.";
                 }
             }
         }
