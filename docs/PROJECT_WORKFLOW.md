@@ -92,8 +92,7 @@ escaping paths cannot be opened.
 - New/Open Project is a **separate visual launcher window**. It does not
   yet support a remembered Recent Projects list or a native OS folder picker.
 - When launched with `--project`, the editor uses project settings and the
-  scene, without compiling any custom game C++ code. User Lua scripts are not
-  implemented yet.
+  scene, without compiling any custom game C++ code. Lua scripts can be attached to entities and run in both editor and player.
 - Save Scene writes to the project's configured startup scene. A legacy
   editor session without a startup scene still uses `assets/scene_saved.json`.
 - The new project uses a flat manifest, so a formal project schema version,
@@ -103,3 +102,7 @@ escaping paths cannot be opened.
   and runtime scene snapshot milestone.
 - Windows is the first supported editor/player target. Cross-platform audio,
   exporter and plugin SDK will be addressed in later phases.
+
+For scripting, use the Asset Browser's **Create Lua Script** control and see
+[Lua Gameplay Scripting](LUA_SCRIPTING.md). The CLI also supports
+`simpleengine_project validate <project-folder>` for scene/script checking.
