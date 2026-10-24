@@ -70,7 +70,7 @@ private:
     void dispatchInputActionEvents();
     bool loadSceneFromPath(const std::string& scenePath);
     void initAssetManifest();
-    void initScene();
+    bool initScene();
     void initInputMap();
     void initScripts();
     void initPlugins();
