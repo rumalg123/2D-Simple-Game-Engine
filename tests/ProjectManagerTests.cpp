@@ -52,12 +52,12 @@ int main() {
     const Entity welcome = starter.findEntityByName("Welcome");
     starter.setTransform(welcome, {0.25f, -0.30f});
     if (!saveSceneToJson(starter, resources, created.config.startupScene, error)) {
-        std::cerr << "Cannot save edited project scene: " << error << '\\n';
+        std::cerr << "Cannot save edited project scene: " << error << '\n';
         return 1;
     }
     Scene reloadedScene;
     if (!loadSceneFromJson(reloadedScene, resources, created.config.startupScene, error)) {
-        std::cerr << "Cannot reload edited project scene: " << error << '\\n';
+        std::cerr << "Cannot reload edited project scene: " << error << '\n';
         return 1;
     }
     const Entity saved = reloadedScene.findEntityByName("Welcome");
@@ -65,7 +65,7 @@ int main() {
         saved == InvalidEntity ? nullptr : reloadedScene.getTransform(saved);
     if (!savedTransform || savedTransform->x != 0.25f ||
         savedTransform->y != -0.30f) {
-        std::cerr << "Saved project scene did not preserve edits.\\n";
+        std::cerr << "Saved project scene did not preserve edits.\n";
         return 1;
     }
 
