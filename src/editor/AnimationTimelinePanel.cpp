@@ -3,6 +3,8 @@
 #include "imgui.h"
 
 #include <algorithm>
+#include <array>
+#include <cstdio>
 #include <string>
 
 void Engine::renderAnimationTimelinePanel() {
@@ -21,6 +23,61 @@ void Engine::renderAnimationTimelinePanel() {
         if (animation.playing) AnimationTools::advance(
             animation, ImGui::GetIO().DeltaTime);
     }
+    ImGui::SeparatorText("Named Animation Clips");
+    static char newClipName[64] = "Run";
+    ImGui::InputText("New Clip Name",newClipName,sizeof(newClipName));
+    if(ImGui::Button("Add Clip") && editable) {
+        AnimationClip clip{newClipName,animation.firstFrame,animation.frameCount,
+                           animation.secondsPerFrame,animation.loop};
+        if(clip.name[0] && !AnimationTools::findClip(animation,clip.name)) {
+            recordSceneEdit();
+        }
+        if(AnimationTools::addClip(animation,clip)) {
+            AnimationTools::selectClip(animation,clip.name);
+            editorStatus="Added named animation clip: "+clip.name;
+        } else editorStatus="Clip name already used or invalid frame range.";
+    }
+    if(animation.clips.empty())
+        ImGui::TextDisabled("Create a named clip for reusable Idle/Run/Jump animations.");
+    else {
+        const char* current=animation.activeClip.empty() ?
+            "(Legacy frame range)" : animation.activeClip.c_str();
+        if(ImGui::BeginCombo("Active Clip",current)) {
+            for(const auto& clip:animation.clips) {
+                bool selected=animation.activeClip==clip.name;
+                if(ImGui::Selectable(clip.name.c_str(),selected) && editable) {
+                    recordSceneEdit();
+                    AnimationTools::selectClip(animation,clip.name);
+                }
+                if(selected) ImGui::SetItemDefaultFocus();
+            }
+            ImGui::EndCombo();
+        }
+        if(!animation.activeClip.empty()) {
+            const AnimationClip* original=AnimationTools::findClip(animation,animation.activeClip);
+            if(original) {
+                AnimationClip modified=*original;
+                bool changed=false;
+                ImGui::BeginDisabled(!editable);
+                changed |= ImGui::InputInt("Clip First Frame",&modified.firstFrame);
+                changed |= ImGui::InputInt("Clip Frame Count",&modified.frameCount);
+                changed |= ImGui::DragFloat("Clip Frame Duration",
+                                              &modified.secondsPerFrame,0.005f,0.001f,2.0f);
+                changed |= ImGui::Checkbox("Clip Loop",&modified.loop);
+                ImGui::EndDisabled();
+                if(changed && editable) {
+                    // Caller can make an undo checkpoint before continuous edits.
+                    if(!AnimationTools::updateClip(animation,modified))
+                        editorStatus="Clip values exceed sprite-sheet boundaries.";
+                }
+                if(ImGui::Button("Delete Active Clip") && editable) {
+                    recordSceneEdit();
+                    AnimationTools::removeClip(animation,modified.name);
+                }
+            }
+        }
+    }
+
     const int total=std::max(1,animation.columns)*std::max(1,animation.rows);
     ImGui::Text("Sprite sheet: %d columns x %d rows (%d frames)",
                 animation.columns,animation.rows,total);
