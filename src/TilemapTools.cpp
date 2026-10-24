@@ -13,8 +13,9 @@ std::size_t indexOf(const TilemapComponent& map, int column, int row) {
          + static_cast<std::size_t>(column);
 }
 bool hasValidSize(const TilemapComponent& map) {
-    return map.columns > 0 && map.rows > 0 &&
-           map.columns <= MaxDimension && map.rows <= MaxDimension;
+    // Runtime collision queries must support legacy maps larger than the
+    // visual painter's bounded creation/editing limits.
+    return map.columns > 0 && map.rows > 0;
 }
 int boundedFloor(double value, int maximum) {
     if (!std::isfinite(value) || value < 0.0) return -1;
@@ -35,8 +36,10 @@ int get(const TilemapComponent& map, int column, int row) {
 }
 
 bool paint(TilemapComponent& map, int column, int row, int atlasIndex) {
-    if (!inBounds(map, column, row)) return false;
-    const int atlasCount = std::max(1, map.atlasColumns) * std::max(1, map.atlasRows);
+    if (!inBounds(map, column, row) ||
+        map.columns > MaxDimension || map.rows > MaxDimension) return false;
+    const int atlasCount = std::clamp(map.atlasColumns,1,16) *
+                           std::clamp(map.atlasRows,1,16);
     if (atlasIndex < EmptyTile || atlasIndex >= atlasCount) return false;
     const std::size_t index = indexOf(map, column, row);
     const std::size_t size =
@@ -67,10 +70,12 @@ bool resize(TilemapComponent& map, int columns, int rows, int empty) {
 }
 
 std::size_t floodFill(TilemapComponent& map, int column, int row, int atlasIndex) {
-    if (!inBounds(map, column, row)) return 0;
+    if (!inBounds(map, column, row) ||
+        map.columns > MaxDimension || map.rows > MaxDimension) return 0;
     const int source = get(map, column, row);
     if (source == atlasIndex || atlasIndex < EmptyTile ||
-        atlasIndex >= std::max(1, map.atlasColumns) * std::max(1, map.atlasRows))
+        atlasIndex >= std::clamp(map.atlasColumns,1,16) *
+                      std::clamp(map.atlasRows,1,16))
         return 0;
     std::deque<std::pair<int, int>> queue;
     queue.emplace_back(column, row);
@@ -109,7 +114,8 @@ std::size_t paintLine(TilemapComponent& map, int x0, int y0, int x1, int y1,
 }
 
 std::size_t checkerboard(TilemapComponent& map, int first, int second) {
-    if (!hasValidSize(map)) return 0;
+    if (!hasValidSize(map) ||
+        map.columns > MaxDimension || map.rows > MaxDimension) return 0;
     std::size_t changed=0;
     for(int y=0;y<map.rows;++y)
         for(int x=0;x<map.columns;++x)
