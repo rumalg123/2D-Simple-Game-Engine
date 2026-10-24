@@ -19,6 +19,8 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
+    src/TilemapTools.cpp
+    src/AnimationTools.cpp
     src/SceneEditSession.cpp
     src/PhysicsSystem.cpp
     src/Memory.cpp
@@ -95,6 +97,8 @@ add_library(se_editor STATIC
     src/editor/EditorFrame.cpp
     src/editor/Gizmo.cpp
     src/editor/EnginePanel.cpp
+    src/editor/TilemapEditorPanel.cpp
+    src/editor/AnimationTimelinePanel.cpp
 )
 target_include_directories(se_editor PUBLIC
     include
