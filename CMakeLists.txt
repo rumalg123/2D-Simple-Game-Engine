@@ -85,6 +85,9 @@ add_library(se_editor STATIC
     src/editor/InspectorPanel.cpp
     src/editor/AssetBrowserPanel.cpp
     src/editor/PluginEditorUI.cpp
+    src/editor/EditorFrame.cpp
+    src/editor/Gizmo.cpp
+    src/editor/EnginePanel.cpp
 )
 target_include_directories(se_editor PUBLIC
     include
@@ -96,9 +99,19 @@ target_link_libraries(se_editor PUBLIC
 )
 add_library(SimpleEngine::Editor ALIAS se_editor)
 
-# Preserve existing entry points while moving editor implementations to se_editor.
-# Engine.cpp still initializes ImGui and dispatches panels. Next stage splits
-# the application bootstrap from the pure runtime.
+# Compatibility application shell: Engine.cpp no longer directly includes or
+# uses Dear ImGui, but it still calls editor-facing functions implemented in
+# se_editor. Next stage introduces separate application/player entry points.
+# Core application code must not regain direct Dear ImGui references.
+# UI lifecycle, gizmos, panels and keyboard capture live in se_editor.
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/src/Engine.cpp" engine_application_source)
+if(engine_application_source MATCHES "#[ \\t]*include[ \\t]*[<\\\"](imgui|imgui_impl)"
+   OR engine_application_source MATCHES "ImGui::")
+    message(FATAL_ERROR
+        "src/Engine.cpp must remain independent of Dear ImGui. "
+        "Move UI integration to src/editor.")
+endif()
+
 add_library(engine_core STATIC
     src/App.cpp
     src/Engine.cpp
