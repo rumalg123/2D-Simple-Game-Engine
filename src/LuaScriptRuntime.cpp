@@ -2,6 +2,7 @@
 
 #include "InputMap.h"
 #include "ScriptSystem.h"
+#include "TilemapTools.h"
 
 extern "C" {
 #include <lua.h>
@@ -14,6 +15,7 @@ extern "C" {
 #include <exception>
 #include <filesystem>
 #include <memory>
+#include <limits>
 #include <string>
 #include <utility>
 #include <vector>
@@ -99,6 +101,41 @@ int setFloat(lua_State* L) {
     return 0;
 }
 
+// The API deliberately operates on this scripted entity's own tilemap.
+// Scripts cannot mutate arbitrary other scenes or objects by raw numeric ID.
+bool luaCell(lua_State* L, int& col, int& row) {
+    const lua_Integer x=luaL_checkinteger(L,1), y=luaL_checkinteger(L,2);
+    if(x<std::numeric_limits<int>::min() || x>std::numeric_limits<int>::max() ||
+       y<std::numeric_limits<int>::min() || y>std::numeric_limits<int>::max())
+        return false;
+    col=static_cast<int>(x);row=static_cast<int>(y);
+    return true;
+}
+
+int tileAt(lua_State* L) {
+    int column=0,row=0;
+    if(!luaCell(L,column,row)) {lua_pushinteger(L,-1);return 1;}
+    const Execution* e=execution(L);
+    const TilemapComponent* map=e && e->context.scene
+        ? e->context.scene->getTilemap(e->entity) : nullptr;
+    lua_pushinteger(L,map ? TilemapTools::get(*map,column,row) : -1);
+    return 1;
+}
+
+int setTile(lua_State* L) {
+    int column=0,row=0;
+    if(!luaCell(L,column,row)) {lua_pushboolean(L,false);return 1;}
+    const lua_Integer tile=luaL_checkinteger(L,3);
+    const Execution* e=execution(L);
+    TilemapComponent* map=e && e->context.scene
+        ? e->context.scene->getTilemap(e->entity) : nullptr;
+    const bool changed=map && tile>=TilemapTools::EmptyTile &&
+        tile<=std::numeric_limits<int>::max() &&
+        TilemapTools::paint(*map,column,row,static_cast<int>(tile));
+    lua_pushboolean(L,changed);
+    return 1;
+}
+
 int entityGuid(lua_State* L) {
     const Execution* e = execution(L);
     const std::string guid = e && e->context.scene
@@ -150,6 +187,8 @@ void setupState(lua_State* L, Execution* e) {
     expose(L, "input_down", inputDown, e);
     expose(L, "get_float", getFloat, e);
     expose(L, "set_float", setFloat, e);
+    expose(L, "tile_at", tileAt, e);
+    expose(L, "set_tile", setTile, e);
     expose(L, "entity_guid", entityGuid, e);
     expose(L, "log", logMessage, e);
     lua_setglobal(L, "engine");
