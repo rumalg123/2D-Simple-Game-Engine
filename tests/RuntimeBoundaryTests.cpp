@@ -59,16 +59,16 @@ int main() {
     plugins.loadPlugin(std::make_unique<TestPlugin>(loads, updates, unloads), context);
     if (plugins.pluginCount() != 1 || loads != 1 ||
         plugins.pluginNames().front() != "Runtime Test Plugin") {
-        std::cerr << "Runtime-only plugin registration failed.\\n";
+        std::cerr << "Runtime-only plugin registration failed.\n";
         return 1;
     }
     plugins.update(context, 0.016f);
     plugins.unloadAll(context);
     if (updates != 1 || unloads != 1 || plugins.pluginCount() != 0) {
-        std::cerr << "Runtime-only plugin lifecycle failed.\\n";
+        std::cerr << "Runtime-only plugin lifecycle failed.\n";
         return 1;
     }
 
-    std::cout << "Runtime-only link and scene lifecycle passed.\n";
+    std::cout << "Runtime-only link and scene and plugin lifecycle passed.\n";
     return 0;
 }
