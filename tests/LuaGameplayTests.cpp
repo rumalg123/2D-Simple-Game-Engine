@@ -5,6 +5,7 @@
 #include "Scene.h"
 #include "SceneSerializer.h"
 #include "ScriptSystem.h"
+#include "TilemapTools.h"
 
 #include <chrono>
 #include <filesystem>
@@ -54,6 +55,8 @@ function on_create()
     engine.set_float("created", 1)
     engine.set_float("no_os", os == nil and 1 or 0)
     engine.set_float("no_io", io == nil and 1 or 0)
+    engine.set_float("previous_tile", engine.tile_at(1, 1))
+    engine.set_float("tile_changed", engine.set_tile(1, 1, 2) and 1 or 0)
 end
 function on_start()
     engine.set_float("started", 1)
@@ -94,6 +97,11 @@ end
         const Entity bob = scene.createEntity("Bob", {10, 0});
         scene.setScript(alice, {"Mover", true, 0});
         scene.setScript(bob, {"Mover", true, 0});
+        TilemapComponent scriptMap;
+        scriptMap.columns=3;scriptMap.rows=3;
+        scriptMap.atlasColumns=4;scriptMap.atlasRows=1;
+        scriptMap.tiles.assign(9,-1);
+        scene.setTilemap(alice,scriptMap);
         InputMap input;
         input.bindAction("MoveRight", 68);
         scripts.update(scene, 0.25f, nullptr, &input);
@@ -104,6 +112,14 @@ end
         near(scene.getScript(bob)->parameters.at("started"), 1, "on_start missing");
         near(scene.getScript(alice)->parameters.at("no_os"), 1, "os exposed in script");
         near(scene.getScript(alice)->parameters.at("no_io"), 1, "io exposed in script");
+        near(scene.getScript(alice)->parameters.at("previous_tile"), -1,
+             "Lua tile_at did not read empty cell");
+        near(scene.getScript(alice)->parameters.at("tile_changed"), 1,
+             "Lua set_tile did not mutate owning entity's map");
+        near(scene.getScript(bob)->parameters.at("tile_changed"), 0,
+             "Lua set_tile incorrectly changed an entity without a map");
+        require(TilemapTools::get(*scene.getTilemap(alice),1,1)==2,
+                "Lua tile map mutation did not persist in runtime ECS");
 
         input.handleKeyChanged(68, true);
         scripts.update(scene, 0.25f, nullptr, &input);

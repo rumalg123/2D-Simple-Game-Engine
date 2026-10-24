@@ -54,6 +54,20 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Visual Tilemap Painter and Sprite Animation Timeline
+
+The editor now has two dedicated level-authoring windows: a full-size,
+zoomable **Tilemap Painter** with pencil, erase, flood fill, line, picker,
+resize-preserve and pattern brushes; and a **Sprite Animation Timeline**
+with frame scrubbing, step, pause, loop, and sprite UV preview. Changes are
+saved through the existing scene JSON and run in the standalone player.
+
+Tile collision queries now check nearby map cells rather than iterating
+every tile, making large 2D levels more practical to simulate.
+
+See [Tilemap & Animation Workflow](docs/TILEMAP_ANIMATION_WORKFLOW.md)
+for usage, limits, tests and future plans.
+
 ## Lua gameplay scripting
 
 Independent projects now run Lua 5.4 gameplay scripts without recompiling

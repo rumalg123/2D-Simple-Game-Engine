@@ -1,6 +1,7 @@
 #include "Engine.h"
 
 #include "SceneSerializer.h"
+#include "AnimationTools.h"
 
 #include <algorithm>
 #include <array>
@@ -820,54 +821,17 @@ void Engine::inputSystem() {
 
 void Engine::spriteAnimationSystem(float deltaTime) {
     ComponentPool<SpriteAnimationComponent>& animations = scene.getSpriteAnimationPool();
-
     for (std::size_t index = 0; index < animations.size(); ++index) {
         const Entity entity = animations.entityAt(index);
         SpriteAnimationComponent& animation = animations.componentAt(index);
-
-        animation.columns = std::max(1, animation.columns);
-        animation.rows = std::max(1, animation.rows);
-        const int totalFrames = std::max(1, animation.columns * animation.rows);
-        animation.firstFrame = clampInt(animation.firstFrame, 0, totalFrames - 1);
-        animation.frameCount = clampInt(animation.frameCount, 1, totalFrames - animation.firstFrame);
-        animation.currentFrame = clampInt(animation.currentFrame, 0, animation.frameCount - 1);
-        animation.secondsPerFrame = std::max(0.001f, animation.secondsPerFrame);
-
-        if (animation.playing) {
-            animation.elapsedSeconds += deltaTime;
-            while (animation.elapsedSeconds >= animation.secondsPerFrame) {
-                animation.elapsedSeconds -= animation.secondsPerFrame;
-
-                if (animation.currentFrame + 1 < animation.frameCount) {
-                    ++animation.currentFrame;
-                    continue;
-                }
-
-                if (animation.loop) {
-                    animation.currentFrame = 0;
-                } else {
-                    animation.currentFrame = animation.frameCount - 1;
-                    animation.elapsedSeconds = 0.0f;
-                    animation.playing = false;
-                    break;
-                }
-            }
+        AnimationTools::advance(animation, deltaTime);
+        if (SpriteComponent* sprite = scene.getSprite(entity)) {
+            const AnimationTools::FrameUv uv = AnimationTools::uv(animation);
+            sprite->uMin = uv.uMin;
+            sprite->uMax = uv.uMax;
+            sprite->vMin = uv.vMin;
+            sprite->vMax = uv.vMax;
         }
-
-        SpriteComponent* sprite = scene.getSprite(entity);
-        if (!sprite) {
-            continue;
-        }
-
-        const int frame = animation.firstFrame + animation.currentFrame;
-        const int column = frame % animation.columns;
-        const int row = frame / animation.columns;
-        const float frameWidth = 1.0f / static_cast<float>(animation.columns);
-        const float frameHeight = 1.0f / static_cast<float>(animation.rows);
-        sprite->uMin = frameWidth * static_cast<float>(column);
-        sprite->uMax = sprite->uMin + frameWidth;
-        sprite->vMax = 1.0f - frameHeight * static_cast<float>(row);
-        sprite->vMin = sprite->vMax - frameHeight;
     }
 }
 
