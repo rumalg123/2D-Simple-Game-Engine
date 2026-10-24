@@ -66,6 +66,7 @@ private:
     int tileBrush = 0;
     int tileStrokeStartX = 0;
     int tileStrokeStartY = 0;
+    Entity tileResizeSelection = InvalidEntity;
     int tileResizeWidth = 8;
     int tileResizeHeight = 8;
     float tileCanvasZoom = 24.0f;
