@@ -55,6 +55,15 @@ struct SpriteComponent {
     float vMax = 1.0f;
 };
 
+// Named sub-range of a sprite-sheet; serialized with the component.
+struct AnimationClip {
+    std::string name;
+    int firstFrame = 0;
+    int frameCount = 1;
+    float secondsPerFrame = 0.10f;
+    bool loop = true;
+};
+
 struct SpriteAnimationComponent {
     int columns = 1;
     int rows = 1;
@@ -65,6 +74,8 @@ struct SpriteAnimationComponent {
     float elapsedSeconds = 0.0f;
     bool playing = true;
     bool loop = true;
+    std::vector<AnimationClip> clips;
+    std::string activeClip;
 };
 
 struct TextComponent {
@@ -100,6 +111,11 @@ struct TilemapComponent {
     bool collisionTrigger = false;
     unsigned int collisionLayer = ColliderLayerDefault;
     unsigned int collisionMask = ColliderMaskAll;
+    // Opt-in 4-direction bitmask terrain (N=1,E=2,S=4,W=8).
+    // When disabled, old map behavior and tile indices are unchanged.
+    bool terrainEnabled = false;
+    int terrainBaseTile = 0;
+    std::vector<int> terrainCells; // 1 = terrain-filled, 0 = not terrain.
 };
 
 struct ColliderComponent {
