@@ -32,9 +32,27 @@ alongside the existing `engine.exe`, Snake, Flappy Bird and starter executables.
 .\build\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
 ```
 
-See [Standalone Editor and Player](docs/EDITOR_PLAYER.md) for configuration,
-architecture, examples, release downloads and current limitations. A visual
-project manager and user-authored scripting remain future work.
+### New/Open Project
+
+Launch the editor without arguments to open the visual project launcher,
+or create a starter project from the command line. New projects contain a
+playable scene and can be opened directly in the editor or player.
+
+```powershell
+.\\build\\SimpleEngineEditor.exe
+.\\build\\simpleengine_project.exe create . MyFirstGame
+.\\build\\SimpleEngineEditor.exe --project .\\MyFirstGame
+.\\build\\SimpleEnginePlayer.exe --project .\\MyFirstGame
+```
+
+In the editor, adjust the starter scene in Scene Hierarchy / Inspector and
+choose **Save Scene JSON**. The standalone player then loads those changes.
+The older `--config` demo mode still works.
+
+See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
+[Standalone Editor and Player](docs/EDITOR_PLAYER.md) for runtime details,
+and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
+scripting, non-destructive Play Mode, GUIDs and export tooling.
 
 ## Build
 
