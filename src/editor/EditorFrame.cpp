@@ -112,3 +112,7 @@ void Engine::endUiFrame() {
     });
     renderCommands.submitFrame();
 }
+
+bool Engine::editorWantsKeyboardCapture() const {
+    return ImGui::GetIO().WantCaptureKeyboard;
+}
