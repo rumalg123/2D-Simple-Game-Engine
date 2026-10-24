@@ -54,6 +54,31 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Lua gameplay scripting
+
+Independent projects now run Lua 5.4 gameplay scripts without recompiling
+C++. New projects include `Assets/Scripts/WelcomeController.lua`; the
+starter scene attaches this script to its Welcome text entity. The Asset
+Browser also supports creating Lua files and attaching them to entities.
+
+Lua scripts can implement per-entity create/start/update/fixed-update/destroy
+hooks and call engine functions for movement, action input, numeric parameters,
+entity GUID and logging. Existing native C++ scripts still work.
+
+```powershell
+.\build\simpleengine_project.exe create . MyLuaGame
+.\build\simpleengine_project.exe validate .\MyLuaGame
+.\build\SimpleEngineEditor.exe --project .\MyLuaGame
+.\build\SimpleEnginePlayer.exe --project .\MyLuaGame
+```
+
+Use **Stop → Reload Lua Scripts → Play** to test Lua changes. The standalone
+player runs the same scripts from the project directory. A Lua 5.4 development
+library is required for builds from source.
+
+See [Lua Scripting](docs/LUA_SCRIPTING.md) for API examples, lifecycle
+details, safety limits and Windows build requirements.
+
 ## Build
 
 ```powershell
