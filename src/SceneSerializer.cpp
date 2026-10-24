@@ -1,4 +1,6 @@
 #include "SceneSerializer.h"
+#include "AnimationTools.h"
+#include "TilemapTools.h"
 
 #include <algorithm>
 #include <atomic>
@@ -94,7 +96,19 @@ void writeSpriteAnimationFields(std::ostream& output, const SpriteAnimationCompo
     writeFloat(output, "secondsPerFrame", animation.secondsPerFrame, true);
     writeFloat(output, "elapsedSeconds", animation.elapsedSeconds, true);
     writeBool(output, "playing", animation.playing, true);
-    writeBool(output, "loop", animation.loop, false);
+    writeBool(output, "loop", animation.loop, true);
+    output << "        \"activeClip\": \"" << escapeJson(animation.activeClip) << "\",\n";
+    output << "        \"clips\": [";
+    for(std::size_t i=0;i<animation.clips.size();++i) {
+        const auto& clip=animation.clips[i];
+        if(i) output << ',';
+        output << "\n          {\"name\": \"" << escapeJson(clip.name)
+               << "\", \"firstFrame\": " << clip.firstFrame
+               << ", \"frameCount\": " << clip.frameCount
+               << ", \"secondsPerFrame\": " << clip.secondsPerFrame
+               << ", \"loop\": " << (clip.loop?"true":"false") << '}';
+    }
+    output << "\n        ]\n";
 }
 
 void writeTextFields(std::ostream& output, const TextComponent& text) {
@@ -154,6 +168,14 @@ void writeTilemapFields(std::ostream& output, const TilemapComponent& tilemap, c
     }
     if (!tilemap.tiles.empty()) {
         output << '\n' << "        ";
+    }
+    output << "],\n";
+    writeBool(output, "terrainEnabled", tilemap.terrainEnabled, true);
+    writeInt(output, "terrainBaseTile", tilemap.terrainBaseTile, true);
+    output << "        \"terrainCells\": [";
+    for(std::size_t i=0;i<tilemap.terrainCells.size();++i) {
+        if(i) output << ',';
+        output << (tilemap.terrainCells[i]!=0?1:0);
     }
     output << "]\n";
 }
