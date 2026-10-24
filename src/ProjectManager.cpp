@@ -162,6 +162,12 @@ bool ProjectManager::open(const std::filesystem::path& root,
         return false;
     }
 
+    if (config.formatVersion != 1) {
+        error = "Unsupported SimpleEngine project format version: " +
+                std::to_string(config.formatVersion) + ". Supported version: 1.";
+        return false;
+    }
+
     // Config paths in a project are relative; reject external traversal.
     for (const std::string* path : {&config.assetRoot, &config.prefabDirectory,
                                     &config.editorLayoutPath, &config.startupScene}) {
