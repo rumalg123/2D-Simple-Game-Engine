@@ -410,7 +410,9 @@ void Engine::hotReloadSystem() {
 
 void Engine::saveCurrentScene() {
     std::filesystem::create_directories(config.assetRoot);
-    const std::string scenePath = (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string();
+    const std::string scenePath = config.startupScene.empty()
+        ? (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string()
+        : config.startupScene;
 
     std::string error;
     if (saveSceneToJson(scene, resources, scenePath, error)) {
@@ -438,7 +440,9 @@ bool Engine::loadSceneFromPath(const std::string& scenePath) {
 }
 
 void Engine::loadSavedScene() {
-    const std::string scenePath = (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string();
+    const std::string scenePath = config.startupScene.empty()
+        ? (std::filesystem::path(config.assetRoot) / "scene_saved.json").generic_string()
+        : config.startupScene;
     loadSceneFromPath(scenePath);
 }
 
