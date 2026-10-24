@@ -224,6 +224,12 @@ add_test(NAME lua_project_cli_smoke
         -P ${CMAKE_SOURCE_DIR}/tests/ProjectCliSmokeTests.cmake
 )
 
+# Non-graphical authoring regression coverage for map tools, collision
+# candidate pruning, sprite-sheet timelines and painted-scene persistence.
+add_executable(tilemap_animation_tests tests/TilemapAnimationTests.cpp)
+target_link_libraries(tilemap_animation_tests PRIVATE se_runtime)
+add_test(NAME tilemap_animation_tests COMMAND tilemap_animation_tests)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
