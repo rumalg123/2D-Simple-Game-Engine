@@ -61,6 +61,14 @@ private:
     bool isPlaying = true;
     bool hotReloadEnabled = true;
     bool gizmoDragging = false;
+    bool tileStrokeActive = false;
+    int tileTool = 0;
+    int tileBrush = 0;
+    int tileStrokeStartX = 0;
+    int tileStrokeStartY = 0;
+    int tileResizeWidth = 8;
+    int tileResizeHeight = 8;
+    float tileCanvasZoom = 24.0f;
     bool imguiInitialized = false;
     int connectedGamepadCount = 0;
     std::string activeGamepadName;
@@ -99,6 +107,8 @@ private:
     void renderSceneHierarchyPanel();
     void renderInspectorPanel();
     void renderAssetBrowserPanel();
+    void renderTilemapEditorPanel();
+    void renderAnimationTimelinePanel();
     void saveCurrentScene();
     void loadSavedScene();
     void saveSelectedPrefab();
