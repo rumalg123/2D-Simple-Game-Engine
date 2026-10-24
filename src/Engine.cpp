@@ -422,9 +422,11 @@ void Engine::stopPlayMode() {
     if (!playSession.active()) return;
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     physicsSystem.clearContacts();
+    const std::string selectedGuid = scene.guid(selectedEntity);
     isPlaying = false;
     playSession.stop(scene);
-    if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+    selectedEntity = selectedGuid.empty() ? InvalidEntity
+                                         : scene.findEntityByGuid(selectedGuid);
     cameraSystem();
     editorStatus = "Stopped simulation; authored scene restored.";
 }
@@ -451,20 +453,26 @@ void Engine::recordSceneEdit() {
 
 void Engine::undoSceneEdit() {
     if (!config.editorEnabled || playSession.active()) return;
+    if (!sceneHistory.canUndo()) return;
+    const std::string selectedGuid = scene.guid(selectedEntity);
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     if (sceneHistory.undo(scene)) {
-        scriptSystem.destroyAll(scene, &prefabs, &inputMap);
         physicsSystem.clearContacts();
-        if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+        selectedEntity = selectedGuid.empty() ? InvalidEntity
+                                             : scene.findEntityByGuid(selectedGuid);
         editorStatus = "Undid scene operation.";
     }
 }
 
 void Engine::redoSceneEdit() {
     if (!config.editorEnabled || playSession.active()) return;
+    if (!sceneHistory.canRedo()) return;
+    const std::string selectedGuid = scene.guid(selectedEntity);
+    scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     if (sceneHistory.redo(scene)) {
-        scriptSystem.destroyAll(scene, &prefabs, &inputMap);
         physicsSystem.clearContacts();
-        if (!scene.isValidEntity(selectedEntity)) selectedEntity = InvalidEntity;
+        selectedEntity = selectedGuid.empty() ? InvalidEntity
+                                             : scene.findEntityByGuid(selectedGuid);
         editorStatus = "Redid scene operation.";
     }
 }
