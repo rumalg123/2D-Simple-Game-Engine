@@ -3,6 +3,8 @@
 
 #include <algorithm>
 #include <exception>
+#include <fstream>
+#include <system_error>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -66,6 +68,57 @@ void Engine::renderAssetBrowserPanel() {
     }
     ImGui::SameLine();
     ImGui::Checkbox("Auto Reload", &hotReloadEnabled);
+
+    ImGui::SeparatorText("Lua Gameplay Scripts");
+    static char newScriptName[64] = "NewBehaviour";
+    ImGui::InputText("Script Name", newScriptName, sizeof(newScriptName));
+    if (ImGui::Button("Create Lua Script")) {
+        const std::string name(newScriptName);
+        if (playSession.active()) {
+            editorStatus = "Stop Play Mode before creating and attaching scripts.";
+        } else if (name.empty() ||
+                   name.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_") != std::string::npos ||
+                   (name[0] >= '0' && name[0] <= '9')) {
+            editorStatus = "Script names must start with a letter/underscore and contain only letters, digits and underscores.";
+        } else {
+            const auto scriptsDirectory = assetRoot / "Scripts";
+            const auto scriptFile = scriptsDirectory / (name + ".lua");
+            std::error_code ec;
+            std::filesystem::create_directories(scriptsDirectory, ec);
+            if (ec) {
+                editorStatus = "Cannot create Scripts folder: " + ec.message();
+            } else if (std::filesystem::exists(scriptFile)) {
+                editorStatus = "Script already exists; refusing to overwrite " + scriptFile.string();
+            } else {
+                std::ofstream out(scriptFile, std::ios::binary | std::ios::trunc);
+                if (!out) {
+                    editorStatus = "Cannot create Lua script: " + scriptFile.string();
+                } else {
+                    out << "-- SimpleEngine behaviour: " << name << "\\n"
+                        << "function on_start()\\n"
+                        << "    engine.log(\\"Script started\\")\\n"
+                        << "end\\n\\n"
+                        << "function on_update(dt)\\n"
+                        << "    -- engine.translate(1.0 * dt, 0)\\n"
+                        << "end\\n";
+                    out.close();
+                    if (!out) {
+                        editorStatus = "Failed to finish writing Lua script.";
+                    } else {
+                        reloadLuaScripts();
+                        if (scene.isValidEntity(selectedEntity)) {
+                            recordSceneEdit();
+                            scene.setScript(selectedEntity, {name, true, 0.0f});
+                        }
+                        editorStatus = "Created script: " + scriptFile.string();
+                    }
+                }
+            }
+        }
+    }
+    ImGui::SameLine();
+    if (ImGui::Button("Reload Scripts")) reloadLuaScripts();
+    ImGui::TextDisabled("Add a Script component in the Inspector to assign behaviour.");
 
     ImGui::SeparatorText("Loaded Textures");
     for (TextureHandle handle = 0; handle < resources.textureCount(); ++handle) {
