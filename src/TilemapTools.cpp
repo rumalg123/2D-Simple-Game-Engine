@@ -66,6 +66,17 @@ bool resize(TilemapComponent& map, int columns, int rows, int empty) {
     map.columns = columns;
     map.rows = rows;
     map.tiles = std::move(next);
+    if (map.terrainEnabled) {
+        std::vector<int> terrain(static_cast<std::size_t>(columns) * rows, 0);
+        for (int y=0; y<std::min(rows,oldRows); ++y)
+            for(int x=0;x<std::min(columns,oldColumns);++x) {
+                const std::size_t source=static_cast<std::size_t>(y)*oldColumns+x;
+                if(source<map.terrainCells.size())
+                    terrain[static_cast<std::size_t>(y)*columns+x] = map.terrainCells[source]!=0;
+            }
+        map.terrainCells=std::move(terrain);
+        rebuildTerrain(map);
+    }
     return true;
 }
 
@@ -121,6 +132,73 @@ std::size_t checkerboard(TilemapComponent& map, int first, int second) {
         for(int x=0;x<map.columns;++x)
             if(paint(map,x,y,(x+y)%2==0 ? first : second)) ++changed;
     return changed;
+}
+
+bool terrainAt(const TilemapComponent& map, int column, int row) {
+    if (!map.terrainEnabled || !inBounds(map,column,row)) return false;
+    const auto index=indexOf(map,column,row);
+    return index<map.terrainCells.size() && map.terrainCells[index]!=0;
+}
+
+namespace {
+void updateTerrainCell(TilemapComponent& map,int x,int y) {
+    if(!inBounds(map,x,y)) return;
+    const auto i=indexOf(map,x,y);
+    if(i>=map.tiles.size()) return;
+    if(!terrainAt(map,x,y)) {
+        map.tiles[i]=EmptyTile;
+        return;
+    }
+    unsigned mask=0;
+    if(terrainAt(map,x,y-1)) mask|=1;
+    if(terrainAt(map,x+1,y)) mask|=2;
+    if(terrainAt(map,x,y+1)) mask|=4;
+    if(terrainAt(map,x-1,y)) mask|=8;
+    map.tiles[i]=map.terrainBaseTile+static_cast<int>(mask);
+}
+}
+bool enableTerrain(TilemapComponent& map,int baseTile) {
+    if(map.columns<1 || map.rows<1 ||
+       map.columns>MaxDimension || map.rows>MaxDimension ||
+       map.atlasColumns<1 || map.atlasRows<1 ||
+       baseTile<0 || baseTile>map.atlasColumns*map.atlasRows-16) return false;
+    const std::size_t count=static_cast<std::size_t>(map.columns)*map.rows;
+    std::vector<int> terrain(count,0);
+    for(std::size_t i=0;i<std::min(count,map.tiles.size());++i)
+        terrain[i]=map.tiles[i]>=0 ? 1 : 0;
+    map.terrainEnabled=true;
+    map.terrainBaseTile=baseTile;
+    map.terrainCells=std::move(terrain);
+    rebuildTerrain(map);
+    return true;
+}
+void disableTerrain(TilemapComponent& map) {
+    map.terrainEnabled=false; // retain generated tile IDs as ordinary art
+    map.terrainCells.clear();
+}
+void rebuildTerrain(TilemapComponent& map) {
+    if(!map.terrainEnabled || map.columns<1 || map.rows<1 ||
+       map.columns>MaxDimension || map.rows>MaxDimension) return;
+    const std::size_t count=static_cast<std::size_t>(map.columns)*map.rows;
+    map.terrainCells.resize(count,0);
+    map.tiles.resize(count,EmptyTile);
+    for(int y=0;y<map.rows;++y)
+        for(int x=0;x<map.columns;++x)
+            updateTerrainCell(map,x,y);
+}
+bool paintTerrain(TilemapComponent& map,int column,int row,bool occupied) {
+    if(!map.terrainEnabled || !inBounds(map,column,row) ||
+       map.columns>MaxDimension || map.rows>MaxDimension) return false;
+    const auto i=indexOf(map,column,row);
+    if(i>=map.terrainCells.size()) return false;
+    if((map.terrainCells[i]!=0)==occupied) return false;
+    map.terrainCells[i]=occupied ? 1 : 0;
+    updateTerrainCell(map,column,row);
+    updateTerrainCell(map,column,row-1);
+    updateTerrainCell(map,column+1,row);
+    updateTerrainCell(map,column,row+1);
+    updateTerrainCell(map,column-1,row);
+    return true;
 }
 
 std::pair<int,int> worldToCell(const TransformComponent& origin,
