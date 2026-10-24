@@ -1,6 +1,8 @@
 #include "SceneSerializer.h"
 
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
@@ -830,9 +832,15 @@ std::string prefabNameFromPath(const std::string& path) {
 }
 
 bool saveSceneToJson(const Scene& scene, const ResourceManager& resources, const std::string& path, std::string& error) {
-    std::ofstream output(path);
+    // Write in the destination directory, then replace the old scene only
+    // after a complete successful write. A failure preserves the old file.
+    static std::atomic<unsigned long long> saveCounter{0};
+    const std::string temporary = path + ".saving-" +
+        std::to_string(std::chrono::steady_clock::now().time_since_epoch().count()) +
+        "-" + std::to_string(saveCounter.fetch_add(1));
+    std::ofstream output(temporary, std::ios::binary | std::ios::trunc);
     if (!output) {
-        error = "Failed to open scene file for writing: " + path;
+        error = "Failed to open temporary scene file for writing: " + temporary;
         return false;
     }
 
@@ -992,6 +1000,22 @@ bool saveSceneToJson(const Scene& scene, const ResourceManager& resources, const
     }
     output << "  ]\n";
     output << "}\n";
+    output.flush();
+    output.close();
+    if (!output) {
+        error = "Failed to finish writing scene: " + path;
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        return false;
+    }
+    std::error_code renameError;
+    std::filesystem::rename(temporary, path, renameError);
+    if (renameError) {
+        error = "Failed to commit scene file: " + renameError.message();
+        std::error_code ignored;
+        std::filesystem::remove(temporary, ignored);
+        return false;
+    }
     return true;
 }
 
