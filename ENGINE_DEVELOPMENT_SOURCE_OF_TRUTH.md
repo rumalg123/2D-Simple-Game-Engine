@@ -76,6 +76,24 @@ Status values:
 - **Next:** Typed events, native plugin API, component handles and hot reload.
 - Details: [Lua Gameplay Scripting](docs/LUA_SCRIPTING.md).
 
+## Visual 2D Level Authoring (This PR)
+
+- **Implemented:** Runtime TilemapTools with bounded pencil, erase, flood
+  fill, line, checkerboard, undo-friendly resizing and world-to-cell queries.
+- **Implemented:** Full scrollable ImGui Tilemap Painter with brush selection,
+  per-gesture undo checkpoint and Play Mode editing lock.
+- **Implemented:** Sprite Animation Timeline with frame strip, scrubbing,
+  pause/step/restart controls and immediate UV updates.
+- **Implemented:** Shared AnimationTools for timeline and runtime tick/UV
+  normalization.
+- **Implemented:** Physics tilemap collision culling via nearby cell ranges
+  rather than whole-map scans; legacy collision events remain unchanged.
+- **Implemented:** Headless CTest for map editing, collision candidates,
+  animation controls, undo and scene serialization.
+- **Next:** True texture atlas thumbnails, multi-layer autotiling, reusable
+  animation clip assets/state machines and optional Box2D backend.
+- Details: [Tilemap & Animation Workflow](docs/TILEMAP_ANIMATION_WORKFLOW.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.
