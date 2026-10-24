@@ -31,6 +31,7 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/Prefab.cpp
     src/ScriptSystem.cpp
     src/InputMap.cpp
+    src/PluginSystem.cpp
     src/glad.c
 )
 
@@ -77,21 +78,37 @@ target_include_directories(se_editor_ui PUBLIC
 target_link_libraries(se_editor_ui PUBLIC glfw3)
 add_library(SimpleEngine::EditorUI ALIAS se_editor_ui)
 
-# Keep the existing target and all downstream executables source-compatible.
-# Once editor-facing Engine/Plugin code is extracted, this target can become
-# an editor-only compatibility facade.
+# Editor-only panels and native editor plugin callbacks live outside the runtime.
+# Plugins, scenes, and game logic can link se_runtime without Dear ImGui.
+add_library(se_editor STATIC
+    src/editor/SceneHierarchyPanel.cpp
+    src/editor/InspectorPanel.cpp
+    src/editor/AssetBrowserPanel.cpp
+    src/editor/PluginEditorUI.cpp
+)
+target_include_directories(se_editor PUBLIC
+    include
+    include/engine
+)
+target_link_libraries(se_editor PUBLIC
+    se_runtime
+    se_editor_ui
+)
+add_library(SimpleEngine::Editor ALIAS se_editor)
+
+# Preserve existing entry points while moving editor implementations to se_editor.
+# Engine.cpp still initializes ImGui and dispatches panels. Next stage splits
+# the application bootstrap from the pure runtime.
 add_library(engine_core STATIC
     src/App.cpp
     src/Engine.cpp
-    src/PluginSystem.cpp
 )
 target_include_directories(engine_core PUBLIC
     include
     include/engine
 )
 target_link_libraries(engine_core PUBLIC
-    se_runtime
-    se_editor_ui
+    se_editor
 )
 
 add_executable(engine

@@ -1,61 +1,80 @@
-# Runtime/editor compilation boundary
+# Runtime and editor compilation boundaries
 
-This is the **first incremental implementation step** of the broader
-[Unity-style architecture roadmap](ENGINE_ARCHITECTURE_ROADMAP.md).
+Part of the [SimpleEngine architecture roadmap](ENGINE_ARCHITECTURE_ROADMAP.md).
+The separation is **in progress**, not finished. This describes the new
+compilation targets after the editor-panel extraction phase.
 
-## New CMake targets
+## Compile and link targets
 
-| Target | Content | Can link without ImGui? |
+| Target | Sources and responsibilities | Direct ImGui dependency |
 | --- | --- | --- |
-| `se_runtime` | Scene/ECS, rendering, audio, physics, scripting, asset/scene systems, utilities | Yes |
-| `se_editor_ui` | Dear ImGui and GLFW/OpenGL ImGui backends | No |
-| `engine_core` | Existing Engine/App and C++ plugin implementation (compatibility facade) | No |
-| `runtime_boundary_tests` | Regression test using runtime scene APIs | Yes |
+| `se_runtime` | ECS/scenes, core runtime systems, and generic `PluginManager` | No |
+| `se_editor_ui` | Vendored Dear ImGui core and GLFW/OpenGL backends | Yes |
+| `se_editor` | Scene Hierarchy, Object Inspector, Asset Browser, built-in prefab plugin UI | Yes |
+| `engine_core` | Legacy `Engine.cpp` and `App.cpp` application shell | Yes (not runtime-only yet) |
+| `runtime_boundary_tests` | Links **only** `se_runtime`; tests scene and plugin lifecycle | No |
 
-Public namespaced targets: `SimpleEngine::Runtime`, `SimpleEngine::EditorUI`.
+Namespaced aliases: `SimpleEngine::Runtime`, `SimpleEngine::EditorUI`,
+`SimpleEngine::Editor`.
 
-Existing executables and samples still link `engine_core`, preserving the
-current API and packaging logic. The new runtime test links **only**
-`se_runtime`, not the editor library.
+Existing targets (`engine`, `snake_sample`, `flappy_bird_sample`,
+`basic_game_template` and `engine_tests`) still link `engine_core`.
+All their public APIs and output names remain unchanged.
 
-## Guardrail
+## Where the editor code lives now
 
-At configure time, CMake scans the `se_runtime` translation units and fails
-if a source file directly includes `imgui.h` or `imgui_impl...` headers.
-This prevents an accidental direct UI dependency while the architecture is
-migrated. It does not yet enforce the whole transitive include graph or remove
-the platform-specific Windows audio/window dependencies.
+- `src/editor/SceneHierarchyPanel.cpp`: `Engine::renderSceneHierarchyPanel()`
+- `src/editor/InspectorPanel.cpp`: `Engine::renderInspectorPanel()` and local `editStringField()`
+- `src/editor/AssetBrowserPanel.cpp`: `Engine::renderAssetBrowserPanel()`
+- `src/editor/PluginEditorUI.cpp`: built-in prefab editor plugin,
+  `PluginManager::loadDefaultPlugins()` and `PluginManager::renderUi()`
+- `src/PluginSystem.cpp`: generic, ImGui-independent plugin registration,
+  `onUpdate`, teardown, count and names.
 
-## Build and test
+The panels remain `Engine` methods with access to its private data to preserve
+existing behavior for this stage. They do **not** yet use a standalone editor
+service/context API, and `Engine.cpp` still owns editor bootstrap, gizmos,
+play/pause UI and several document-editing operations.
 
-On a supported Windows/MSYS2 UCRT64 development environment:
+## Guardrails and tests
+
+CMake scans the source files assigned to `se_runtime` for direct ImGui header
+includes and rejects them at configure time. The runtime-only test now
+exercises `PluginManager` registration, update and unload in addition to
+scene/component operations. This only establishes the first boundary: it is
+not a full transitive dependency verifier, and runtime is still Windows-focused.
+
+Windows + MSYS2 UCRT64 prerequisites are in the repository release workflow.
+To build and run the full regression suite:
 
 ```sh
 cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build
+cmake --build build --parallel 2
 ctest --test-dir build --output-on-failure
 ```
 
-Explicit new target check:
+To verify runtime-only compilation specifically:
 
 ```sh
 cmake --build build --target runtime_boundary_tests
 ctest --test-dir build --output-on-failure -R runtime_boundary_tests
 ```
 
-## Migration checklist
+The extraction should be checked with a native Windows build before merging.
+Moving methods between translation units alone does not prove final linker and
+GUI functionality.
 
-1. **This PR:** Split runtime sources, standalone ImGui, compatibility facade,
-   source-level guard, and runtime-only lifecycle test.
-2. Next: extract ImGui panel rendering from `src/Engine.cpp` and editor UI
-   hooks from `src/PluginSystem.cpp`, leaving pure engine loop/services in
-   runtime targets.
-3. Next: introduce `SimpleEngineEditor` and `SimpleEnginePlayer` executables
-   with shared runtime bootstrap services.
-4. Then: project manifest/manager, GUID-based scene documents, separate
-   editor/runtime worlds, and a minimal generic player for arbitrary projects.
-5. Independently: replace WinMM and Windows-only link flags with portable
-   backends and platform-specific link options.
+## Follow-up milestones
 
-No complete editor/runtime separation or cross-platform compatibility is
-claimed at this stage. Those are follow-up milestones.
+1. Extract editor bootstrap and play/gizmo controls from `Engine.cpp`.
+2. Replace direct `Engine` private-state access in editor panels with
+   `EditorContext` / `EditorCommands` and explicit callbacks.
+3. Move `onRenderUi` out of runtime-facing `IPlugin` to a separate editor
+   extension interface; make default editor plugins registered by the editor.
+4. Add separate `SimpleEngineEditor` and `SimpleEnginePlayer` entry points.
+5. Implement independent projects, persistent entity identifiers and
+   authored-vs-runtime scene isolation.
+6. Replace Windows-only audio/link dependencies and add native platform CI.
+
+This remains a **behavior-preserving refactor**, not yet a new project authoring
+feature or a cross-platform engine release.

@@ -19,11 +19,13 @@ Status values:
 
 ## Current Platform Migration (In Progress)
 
-- **In Progress:** Compile-time separation of runtime sources (`se_runtime`) and
-  Dear ImGui integration (`se_editor_ui`), keeping the existing `engine_core`
-  compatibility target. Includes a standalone runtime-only CTest.
-- **Planned next:** Extract editor methods and ImGui-driven plugin panels from
-  `Engine.cpp` and `PluginSystem.cpp`, then introduce independent editor and player entry points.
+- **Done:** Split compilation of runtime (`se_runtime`) and Dear ImGui
+  (`se_editor_ui`) with a compatibility `engine_core` and runtime-only CTest.
+- **In Progress:** Move scene hierarchy, inspector, asset browser and built-in
+  prefab-plugin UI to `se_editor`. The generic `PluginManager` is now part of
+  `se_runtime`; the runtime-only test covers its lifecycle.
+- **Planned next:** Decouple editor panels from `Engine` private state, extract
+  editor bootstrap and gizmos, then introduce independent editor/player apps.
 - Details: [Runtime/editor build boundaries](docs/BUILD_BOUNDARIES.md).
 
 ## Current Focus
