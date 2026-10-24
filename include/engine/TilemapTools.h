@@ -29,6 +29,15 @@ std::size_t paintLine(TilemapComponent& map, int x0, int y0,
                       int x1, int y1, int atlasIndex);
 std::size_t checkerboard(TilemapComponent& map, int first, int second);
 
+// Opt-in four-neighbor terrain: 16 atlas variants in fixed N/E/S/W order.
+// Terrain cells are separate from tile IDs, so brush and persistence do not
+// require reconstructing adjacency from an atlas index.
+bool enableTerrain(TilemapComponent& map, int baseTile);
+void disableTerrain(TilemapComponent& map);
+bool terrainAt(const TilemapComponent& map, int column, int row);
+bool paintTerrain(TilemapComponent& map, int column, int row, bool occupied);
+void rebuildTerrain(TilemapComponent& map);
+
 // Map origin is its top-left edge; Y grows upward in world space but rows
 // grow downward. Matches PhysicsSystem::tileTransformFor and renderer layout.
 std::pair<int, int> worldToCell(const TransformComponent& origin,
