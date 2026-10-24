@@ -126,3 +126,13 @@ layer ordering.
 The external design references are Godot 4 TileMapLayer terrain connect and
 AnimationTree/AnimationPlayer separation; these are architectural references,
 not a claim of feature parity.
+
+## Complete example project
+
+Open [Terrain + Clips Demo](../examples/terrain-clip-demo/README.md)
+with `SimpleEngineEditor --project examples/terrain-clip-demo` or run it
+using `SimpleEnginePlayer --project examples/terrain-clip-demo`. This bundled
+project demonstrates multiple tile layers, the terrain occupancy channel,
+named Idle/Run clips and Lua clip switching. CTest validates the project
+manifest, scene and Lua script source.
+
