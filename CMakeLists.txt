@@ -21,6 +21,7 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/Memory.cpp
     src/Game.cpp
     src/GameConfig.cpp
+    src/ProjectManager.cpp
     src/JobSystem.cpp
     src/GpuResourceManager.cpp
     src/RenderGraph.cpp
@@ -149,6 +150,15 @@ add_test(NAME engine_core_tests COMMAND engine_tests)
 add_executable(runtime_boundary_tests tests/RuntimeBoundaryTests.cpp)
 target_link_libraries(runtime_boundary_tests PRIVATE se_runtime)
 add_test(NAME runtime_boundary_tests COMMAND runtime_boundary_tests)
+
+# Independent project creation/inspection CLI: only depends on the runtime
+# library and does not link the editor, Engine.cpp or Dear ImGui.
+add_executable(simpleengine_project src/ProjectTool.cpp)
+target_link_libraries(simpleengine_project PRIVATE se_runtime)
+
+add_executable(project_manager_tests tests/ProjectManagerTests.cpp)
+target_link_libraries(project_manager_tests PRIVATE se_runtime)
+add_test(NAME project_manager_tests COMMAND project_manager_tests)
 
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp

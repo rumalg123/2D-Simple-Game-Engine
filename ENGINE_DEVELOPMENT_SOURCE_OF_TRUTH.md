@@ -31,6 +31,16 @@ Status values:
   editor/player applications with no ImGui library in the player.
 - Details: [Runtime/editor build boundaries](docs/BUILD_BOUNDARIES.md).
 
+## Independent Project Foundation (In Progress)
+
+- **In Progress:** `ProjectManager` and `simpleengine_project` create and
+  validate independent project folders and `project.simple.json` manifests.
+  This library is linked to `se_runtime`, not to the editor.
+- **Done in this branch:** Project creation/reopen/path-safety tests, Windows
+  PR CI coverage, and [project workflow documentation](docs/PROJECT_WORKFLOW.md).
+- **Next:** Visual Project Manager, editor startup from `ProjectInfo`,
+  scene document serialization, and truly editor-free player binary.
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.
