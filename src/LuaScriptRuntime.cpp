@@ -189,6 +189,7 @@ struct LuaScriptRuntime::Instance {
     ~Instance() { if (L) lua_close(L); }
 };
 
+LuaScriptRuntime::LuaScriptRuntime() = default;
 LuaScriptRuntime::~LuaScriptRuntime() { clear(); }
 
 void LuaScriptRuntime::clear() { instances.clear(); }
