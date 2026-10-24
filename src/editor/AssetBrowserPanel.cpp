@@ -94,13 +94,13 @@ void Engine::renderAssetBrowserPanel() {
                 if (!out) {
                     editorStatus = "Cannot create Lua script: " + scriptFile.string();
                 } else {
-                    out << "-- SimpleEngine behaviour: " << name << "\\n"
-                        << "function on_start()\\n"
-                        << "    engine.log(\\"Script started\\")\\n"
-                        << "end\\n\\n"
-                        << "function on_update(dt)\\n"
-                        << "    -- engine.translate(1.0 * dt, 0)\\n"
-                        << "end\\n";
+                    out << "-- SimpleEngine behaviour: " << name << "\n"
+                        << "function on_start()\n"
+                        << "    engine.log(\"Script started\")\n"
+                        << "end\n\n"
+                        << "function on_update(dt)\n"
+                        << "    -- engine.translate(1.0 * dt, 0)\n"
+                        << "end\n";
                     out.close();
                     if (!out) {
                         editorStatus = "Failed to finish writing Lua script.";
