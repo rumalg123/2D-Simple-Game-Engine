@@ -11,7 +11,9 @@ and select the archive for the program you want to run:
 
 | File | Contents |
 | --- | --- |
-| `SimpleEngine-Windows-x64.zip` | Engine demo, game editor/runtime, assets, config, Windows DLLs, and launcher |
+| `SimpleEngine-Windows-x64.zip` | Legacy engine/demo, assets, config, DLLs, and launcher |
+| `SimpleEngineEditor-Windows-x64.zip` | Independent editor executable, demo assets and launcher |
+| `SimpleEnginePlayer-Windows-x64.zip` | Editor-free serialized-scene player, welcome scene, DLLs and launcher |
 | `SnakeSample-Windows-x64.zip` | Playable standalone Snake game |
 | `FlappyBirdSample-Windows-x64.zip` | Playable standalone Flappy Bird game |
 | `BasicGameTemplate-Windows-x64.zip` | Standalone starter game |
@@ -19,8 +21,9 @@ and select the archive for the program you want to run:
 | `SHA256SUMS.txt` | SHA-256 checksums for the ZIP downloads |
 
 To start a Windows game, extract its ZIP into a folder, keep its files together,
-and double-click `launch.bat`. The launcher runs the executable with the
-package-local `game.config.json` and `--runtime` option.
+and double-click `launch.bat`. The launcher uses the package-local `game.config.json`. Legacy games use
+`--runtime`, the independent editor uses `--editor`, and the independent
+player uses `--config` without editor-specific command-line flags.
 
 The separate `GameFiles.zip` is **optional** when playing. Each standalone
 Windows ZIP already contains its required configuration and runtime files.
@@ -38,9 +41,9 @@ The workflow is `.github/workflows/publish-game-downloads.yml`.
 4. Inspect the compiled executables and their DLL dependencies; bundle UCRT64
    runtime DLLs while excluding Windows system DLLs.
 5. Run CTest, including the packaging smoke test.
-6. Package the four standalone applications with `tools/package.ps1`.
+6. Package the six applications with `tools/package.ps1`.
 7. Generate the separate game files download with `tools/package-game-files.ps1`.
-8. Calculate SHA-256 checksums and publish the six downloads to a GitHub Release,
+8. Calculate SHA-256 checksums and publish eight assets to a GitHub Release,
    tagged `build-<GitHub Actions run number>`.
 
 A failed build or failed test stops the release, so a failed pipeline never
