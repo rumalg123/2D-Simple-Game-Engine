@@ -3,8 +3,8 @@
 ## Ready-to-run downloads
 
 Portable Windows x64 builds are published automatically after each push or
-merged pull request to `main`. Download the engine, Snake, Flappy Bird, or
-basic game template ZIP from the
+merged pull request to `main`. Download the editor, standalone scene player,
+engine demo, Snake, Flappy Bird, or basic game template ZIP from the
 [latest GitHub Release](https://github.com/rumalg123/2D-Simple-Game-Engine/releases/latest).
 Extract the ZIP and run `launch.bat`. Runtime DLLs, config files, and required
 assets are included. The optional `GameFiles.zip` contains the original game
