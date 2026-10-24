@@ -45,13 +45,13 @@ void Engine::renderTilemapEditorPanel() {
     if (ImGui::Button("Checkerboard") && editable) {
         recordSceneEdit();
         TilemapTools::checkerboard(map,0,
-            std::min(1,std::max(1,map.atlasColumns)*std::max(1,map.atlasRows)-1));
+            std::min(1,std::clamp(map.atlasColumns,1,16)*std::clamp(map.atlasRows,1,16)-1));
     }
 
     const char* tools[] = {"Pencil", "Eraser", "Flood Fill", "Line", "Eyedropper"};
     ImGui::Combo("Tool", &tileTool, tools, 5);
-    const int atlasCount = std::clamp(
-        std::max(1,map.atlasColumns)*std::max(1,map.atlasRows),1,256);
+    const int atlasCount = std::clamp(map.atlasColumns,1,16) *
+                           std::clamp(map.atlasRows,1,16);
     tileBrush = std::clamp(tileBrush,0,atlasCount-1);
     ImGui::SliderInt("Atlas Brush", &tileBrush,0,atlasCount-1);
     ImGui::SliderFloat("Canvas Zoom", &tileCanvasZoom,10.0f,40.0f,"%.0f px");
