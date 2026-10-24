@@ -1,4 +1,5 @@
 #include "PhysicsSystem.h"
+#include "TilemapTools.h"
 
 #include <algorithm>
 #include <cmath>
@@ -84,10 +85,10 @@ bool overlapsAnyTile(
     const TransformComponent& tilemapTransform,
     const TilemapComponent& tilemap,
     const ColliderComponent& tileCollider) {
-    const int columns = std::max(1, tilemap.columns);
-    const int rows = std::max(1, tilemap.rows);
-    for (int row = 0; row < rows; ++row) {
-        for (int column = 0; column < columns; ++column) {
+    const auto cells = TilemapTools::overlappingCells(
+        tilemapTransform, tilemap, transform, collider);
+    for (int row = cells.firstRow; row <= cells.lastRow; ++row) {
+        for (int column = cells.firstColumn; column <= cells.lastColumn; ++column) {
             if (!tilemapCellIsSolid(tilemap, column, row)) {
                 continue;
             }
@@ -399,10 +400,10 @@ void PhysicsSystem::resolveCollisions(Scene& scene, EventQueue& events) {
             }
 
             std::vector<TransformComponent> overlappingTiles;
-            const int columns = std::max(1, tilemap.columns);
-            const int rows = std::max(1, tilemap.rows);
-            for (int row = 0; row < rows; ++row) {
-                for (int column = 0; column < columns; ++column) {
+            const auto cells = TilemapTools::overlappingCells(
+                *tilemapTransform, tilemap, *transform, *collider);
+            for (int row = cells.firstRow; row <= cells.lastRow; ++row) {
+                for (int column = cells.firstColumn; column <= cells.lastColumn; ++column) {
                     if (!tilemapCellIsSolid(tilemap, column, row)) {
                         continue;
                     }
