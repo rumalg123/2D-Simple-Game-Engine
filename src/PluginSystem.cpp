@@ -1,8 +1,10 @@
 #include "PluginSystem.h"
 
-
 #include <algorithm>
+#include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 void PluginManager::loadPlugin(std::unique_ptr<IPlugin> plugin, PluginContext& context) {
     plugin->onLoad(context);
