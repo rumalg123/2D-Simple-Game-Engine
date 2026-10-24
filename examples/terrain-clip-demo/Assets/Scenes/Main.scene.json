@@ -1,0 +1,278 @@
+{
+  "camera": {
+    "x": 0,
+    "y": 0,
+    "halfWidth": 1,
+    "halfHeight": 1
+  },
+  "entities": [
+    {
+      "id": 0,
+      "name": {
+        "name": "Background Layer"
+      },
+      "transform": {
+        "x": -0.96,
+        "y": 0.52
+      },
+      "tilemap": {
+        "columns": 12,
+        "rows": 7,
+        "tileWidth": 0.16,
+        "tileHeight": 0.16,
+        "atlasColumns": 4,
+        "atlasRows": 4,
+        "layer": -200,
+        "red": 0.12,
+        "green": 0.14,
+        "blue": 0.22,
+        "alpha": 0.42,
+        "tiles": [
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1,
+          0,
+          1
+        ],
+        "collisionEnabled": false
+      }
+    },
+    {
+      "id": 1,
+      "name": {
+        "name": "Connected Ground"
+      },
+      "transform": {
+        "x": -0.96,
+        "y": -0.55
+      },
+      "tilemap": {
+        "columns": 12,
+        "rows": 2,
+        "tileWidth": 0.16,
+        "tileHeight": 0.16,
+        "atlasColumns": 4,
+        "atlasRows": 4,
+        "layer": -50,
+        "red": 0.3,
+        "green": 0.8,
+        "blue": 0.38,
+        "alpha": 1,
+        "tiles": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "collisionEnabled": true,
+        "collisionSolid": true,
+        "collisionTrigger": false,
+        "terrainEnabled": true,
+        "terrainBaseTile": 0,
+        "terrainCells": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": 2,
+      "name": {
+        "name": "Lua Player"
+      },
+      "transform": {
+        "x": -0.55,
+        "y": -0.34
+      },
+      "sprite": {
+        "halfWidth": 0.08,
+        "halfHeight": 0.1,
+        "red": 0.22,
+        "green": 0.8,
+        "blue": 0.98,
+        "alpha": 1,
+        "layer": 10
+      },
+      "spriteAnimation": {
+        "columns": 4,
+        "rows": 1,
+        "firstFrame": 0,
+        "frameCount": 1,
+        "currentFrame": 0,
+        "secondsPerFrame": 0.3,
+        "elapsedSeconds": 0,
+        "playing": true,
+        "loop": true,
+        "activeClip": "Idle",
+        "clips": [
+          {
+            "name": "Idle",
+            "firstFrame": 0,
+            "frameCount": 1,
+            "secondsPerFrame": 0.3,
+            "loop": true
+          },
+          {
+            "name": "Run",
+            "firstFrame": 1,
+            "frameCount": 3,
+            "secondsPerFrame": 0.08,
+            "loop": true
+          }
+        ]
+      },
+      "script": {
+        "scriptName": "TerrainPlayer",
+        "active": true,
+        "elapsedTime": 0,
+        "parameters": {
+          "speed": 1.2
+        }
+      }
+    },
+    {
+      "id": 3,
+      "name": {
+        "name": "Instructions"
+      },
+      "transform": {
+        "x": -0.86,
+        "y": 0.72
+      },
+      "text": {
+        "text": "WASD / ARROWS TO MOVE",
+        "characterWidth": 0.06,
+        "characterHeight": 0.09,
+        "characterSpacing": 0.012,
+        "lineSpacing": 0.025,
+        "red": 1,
+        "green": 0.92,
+        "blue": 0.66,
+        "alpha": 1,
+        "layer": 100,
+        "screenSpace": false
+      }
+    }
+  ]
+}
