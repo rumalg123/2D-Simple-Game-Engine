@@ -305,3 +305,14 @@ add_test(
         -ReadmePath ${CMAKE_SOURCE_DIR}/templates/basic_game/README.md
         -AllowMissingAssets
 )
+
+# Verify a release-style editor package opens the Project Hub rather than
+# the legacy demo. This smoke test does not launch a graphical application.
+add_test(
+    NAME package_editor_project_hub_smoke
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tests/EditorPackageSmokeTests.ps1
+        -RepoRoot ${CMAKE_SOURCE_DIR}
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_BINARY_DIR}/editor_package_test_dist
+)
