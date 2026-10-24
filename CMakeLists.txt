@@ -156,6 +156,7 @@ target_link_libraries(SimpleEnginePlayer PRIVATE se_player_core)
 # The editor keeps the original game/demo code and links the editor facade.
 add_executable(SimpleEngineEditor
     src/editor/EditorMain.cpp
+    src/editor/ProjectLauncher.cpp
     src/DemoScene.cpp
     src/DemoGame.cpp
 )
