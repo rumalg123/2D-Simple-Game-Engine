@@ -95,8 +95,21 @@ int main() {
                             created.config.startupScene);
 
 
-    // Test that a project cannot resolve assets outside its directory.
+    // Future incompatible project formats must fail with an explicit error.
     const auto manifest = created.root / ProjectManager::ManifestName;
+    {
+        std::ofstream out(manifest, std::ios::trunc);
+        out << R"({"formatVersion": 99, "assetRoot": "Assets",
+                      "prefabDirectory": "Assets/Prefabs",
+                      "editorLayoutPath": "ProjectSettings/editor.ini"})";
+    }
+    if (ProjectManager::open(created.root, reopened, error) ||
+        error.find("Unsupported SimpleEngine project format version") == std::string::npos) {
+        std::cerr << "Unsupported project schema was not rejected.\n";
+        return 1;
+    }
+
+    // Test that a project cannot resolve assets outside its directory.
     {
         std::ofstream out(manifest, std::ios::trunc);
         out << "{\"assetRoot\": \"../outside\", \"prefabDirectory\": \"Assets/Prefabs\"}";
