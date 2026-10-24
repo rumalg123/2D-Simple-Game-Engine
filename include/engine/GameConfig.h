@@ -3,6 +3,7 @@
 #include <string>
 
 struct GameConfig {
+    int formatVersion = 1; // Project manifest schema version (legacy configs default to 1).
     std::string windowTitle = "Engine v0.3";
     int windowWidth = 800;
     int windowHeight = 600;
