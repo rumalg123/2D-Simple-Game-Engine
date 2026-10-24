@@ -47,6 +47,20 @@ Status values:
 - **Next:** Visual Project Manager, editor startup from `ProjectInfo`,
   scene document serialization, and truly editor-free player binary.
 
+## Visual Project Authoring (This PR)
+
+- **Implemented:** New/Open Project visual launcher in
+  `SimpleEngineEditor`; also supports direct `--project <folder>`.
+- **Implemented:** Newly created projects contain a loadable, editable
+  `Assets/Scenes/Main.scene.json`, recorded as the manifest startup scene.
+- **Implemented:** Save/Load Scene in the editor uses that startup scene;
+  `SimpleEnginePlayer --project <folder>` runs the same saved scene.
+- **Implemented:** Project path/startup validation, expanded project tests,
+  startup scene inspection in `simpleengine_project info`, and documentation.
+- **Next:** Persistent scene/entity IDs and editor/runtime scene isolation,
+  native Lua gameplay scripting, project export and Recent Projects UX.
+- See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full workflow.
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.

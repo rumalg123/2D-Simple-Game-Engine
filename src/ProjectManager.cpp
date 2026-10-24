@@ -87,6 +87,34 @@ bool ProjectManager::create(const std::filesystem::path& parent,
         }
         if (ec) break;
 
+        // Every newly created project is immediately playable and editable.
+        // This is the same scene JSON format used by SceneSerializer.
+        std::ofstream scene(root / "Assets/Scenes/Main.scene.json",
+                            std::ios::binary | std::ios::trunc);
+        if (!scene) { error = "Cannot create the starter scene."; break; }
+        scene << R"SCENE({
+  "camera": {"x": 0, "y": 0, "halfWidth": 1, "halfHeight": 1},
+  "entities": [
+    {
+      "id": 0,
+      "name": {"name": "Welcome"},
+      "transform": {"x": -0.58, "y": 0},
+      "text": {
+        "text": "YOUR FIRST GAME",
+        "characterWidth": 0.08,
+        "characterHeight": 0.12,
+        "characterSpacing": 0.02,
+        "lineSpacing": 0.04,
+        "red": 0.95, "green": 0.95, "blue": 1.0, "alpha": 1.0,
+        "layer": 100,
+        "screenSpace": false
+      }
+    }
+  ]
+})SCENE";
+        scene.close();
+        if (!scene) { error = "Could not finish writing the starter scene."; break; }
+
         std::ofstream output(root / ManifestName, std::ios::binary | std::ios::trunc);
         if (!output) { error = "Cannot write project manifest."; break; }
         output << "{\n"
@@ -96,6 +124,7 @@ bool ProjectManager::create(const std::filesystem::path& parent,
                << "  \"windowHeight\": 720,\n"
                << "  \"editorEnabled\": true,\n"
                << "  \"startPlaying\": false,\n"
+               << "  \"startupScene\": \"Assets/Scenes/Main.scene.json\",\n"
                << "  \"assetRoot\": \"Assets\",\n"
                << "  \"prefabDirectory\": \"Assets/Prefabs\",\n"
                << "  \"editorLayoutPath\": \"ProjectSettings/editor.ini\"\n"
@@ -133,9 +162,16 @@ bool ProjectManager::open(const std::filesystem::path& root,
         return false;
     }
 
+    if (config.formatVersion != 1) {
+        error = "Unsupported SimpleEngine project format version: " +
+                std::to_string(config.formatVersion) + ". Supported version: 1.";
+        return false;
+    }
+
     // Config paths in a project are relative; reject external traversal.
     for (const std::string* path : {&config.assetRoot, &config.prefabDirectory,
-                                    &config.editorLayoutPath}) {
+                                    &config.editorLayoutPath, &config.startupScene}) {
+        if (path->empty()) continue;  // Older projects may not have a startup scene.
         const std::filesystem::path relative(*path);
         if (relative.is_absolute() || !isInside(canonicalRoot, canonicalRoot / relative)) {
             error = "Project configuration contains an invalid external path.";
@@ -163,9 +199,21 @@ bool ProjectManager::open(const std::filesystem::path& root,
         return false;
     }
 
+    std::filesystem::path startupScene;
+    if (!config.startupScene.empty()) {
+        startupScene = std::filesystem::weakly_canonical(
+            canonicalRoot / config.startupScene, ec);
+        if (ec || !isInside(canonicalRoot, startupScene) ||
+            !std::filesystem::is_regular_file(startupScene)) {
+            error = "Project startup scene is missing or resolves outside the project.";
+            return false;
+        }
+    }
+
     config.assetRoot = assetRoot.string();
     config.prefabDirectory = prefabRoot.string();
     config.editorLayoutPath = layoutPath.string();
+    if (!config.startupScene.empty()) config.startupScene = startupScene.string();
     project = {canonicalRoot, canonicalRoot.filename().string(), config};
     return true;
 }

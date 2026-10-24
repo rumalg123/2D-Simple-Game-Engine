@@ -14,6 +14,7 @@ struct GameConfig {
     std::string assetRoot = "assets";
     std::string prefabDirectory = "assets/prefabs";
     std::string editorLayoutPath = "assets/editor_layout.ini";
+    int formatVersion = 1; // Project manifest schema version; legacy configs default to 1.
 };
 
 bool loadGameConfigFromFile(const std::string& path, GameConfig& config, std::string& error);

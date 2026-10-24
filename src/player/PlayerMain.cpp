@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "GameConfig.h"
+#include "ProjectManager.h"
 
 #include <filesystem>
 #include <iostream>
@@ -23,20 +24,23 @@ int main(int argc, char** argv) {
     GameConfig config;
     std::filesystem::path configDirectory = std::filesystem::current_path();
     std::string configPath;
+    std::string projectPath;
     std::string sceneOverride;
 
     for (int index = 1; index < argc; ++index) {
         const std::string argument = argv[index];
         if (argument == "--help" || argument == "-h") {
-            std::cout << "SimpleEnginePlayer [--config <game.config.json>] [--scene <scene.json>]\n"
+            std::cout << "SimpleEnginePlayer [--project <project-folder>] [--config <game.config.json>] [--scene <scene.json>]\n"
                          "Config and scene paths are resolved relative to the config directory.\n"
                          "The player runs serialized scenes; Lua/game-project scripts are not yet supported.\n";
             return 0;
         }
-        if ((argument == "--config" || argument == "--scene") && index + 1 < argc) {
+        if ((argument == "--config" || argument == "--scene" || argument == "--project") && index + 1 < argc) {
             const std::string value = argv[++index];
             if (argument == "--config") {
                 configPath = value;
+            } else if (argument == "--project") {
+                projectPath = value;
             } else {
                 sceneOverride = value;
             }
@@ -44,6 +48,25 @@ int main(int argc, char** argv) {
         }
         std::cerr << "Unknown or incomplete argument: " << argument << '\n';
         return 1;
+    }
+
+    if (!projectPath.empty() && !configPath.empty()) {
+        std::cerr << "--project and --config cannot be used together.\n";
+        return 1;
+    }
+    if (!projectPath.empty()) {
+        ProjectInfo project;
+        std::string error;
+        if (!ProjectManager::open(projectPath, project, error)) {
+            std::cerr << "Cannot open project: " << error << '\n';
+            return 1;
+        }
+        if (project.config.startupScene.empty()) {
+            std::cerr << "Project has no startupScene. Save a scene first.\n";
+            return 1;
+        }
+        config = project.config;
+        configDirectory = project.root;
     }
 
     if (!configPath.empty()) {

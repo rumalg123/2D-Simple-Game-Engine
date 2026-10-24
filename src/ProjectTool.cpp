@@ -30,6 +30,7 @@ int main(int argc, char** argv) {
     }
     std::cout << "Project: " << project.name << '\n'
               << "Root: " << project.root.string() << '\n'
-              << "Assets: " << project.config.assetRoot << '\n';
+              << "Assets: " << project.config.assetRoot << '\n'
+              << "Startup scene: " << (project.config.startupScene.empty() ? "(not configured)" : project.config.startupScene) << '\n';
     return 0;
 }
