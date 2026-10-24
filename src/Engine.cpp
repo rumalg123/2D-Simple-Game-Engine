@@ -150,17 +150,28 @@ bool Engine::init() {
         return false;
     }
 
-    if (config.editorEnabled && !initImGui()) {
-        std::cerr << "Failed to initialize ImGui.\n";
+    if (config.editorEnabled) {
+#if defined(SIMPLEENGINE_PLAYER_ONLY)
+        std::cerr << "This player build cannot initialize the editor.\n";
         cleanup();
         return false;
+#else
+        if (!initImGui()) {
+            std::cerr << "Failed to initialize ImGui.\n";
+            cleanup();
+            return false;
+        }
+#endif
     }
 
     jobSystem.start();
     initInputMap();
     initScripts();
     initAssetManifest();
-    initScene();
+    if (!initScene()) {
+        cleanup();
+        return false;
+    }
     initPlugins();
     glContext.release();
     renderCommands.start();
@@ -208,13 +219,16 @@ void Engine::run() {
         hotReloadSystem();
         audioSystem.update();
         renderCommands.waitUntilIdle();
+#if !defined(SIMPLEENGINE_PLAYER_ONLY)
         if (imguiInitialized) {
             beginUiFrame();
             handleGizmo();
             renderUi();
             renderSystem();
             endUiFrame();
-        } else {
+        } else
+#endif
+        {
             renderSystem();
             presentRuntimeFrame();
         }
@@ -295,7 +309,7 @@ void Engine::dispatchInputActionEvents() {
     }
 }
 
-void Engine::initScene() {
+bool Engine::initScene() {
     scriptSystem.destroyAll(scene, &prefabs, &inputMap);
     physicsSystem.clearContacts();
     clearGpuTextureCache();
@@ -306,6 +320,14 @@ void Engine::initScene() {
         GameContext gameContext = makeGameContext();
         game->loadInitialScene(gameContext);
     }
+    if (!config.startupScene.empty()) {
+        std::string error;
+        if (!loadSceneFromJson(scene, resources, config.startupScene, error)) {
+            std::cerr << "Failed to open startup scene: " << error << '\n';
+            editorStatus = error;
+            return false;
+        }
+    }
     std::size_t loadedPrefabCount = 0;
     std::string prefabError;
     if (!loadPrefabDirectoryFromJson(prefabs, resources, config.prefabDirectory, loadedPrefabCount, prefabError)) {
@@ -315,6 +337,7 @@ void Engine::initScene() {
     selectedEntity = scene.getPlayerEntity();
     notifyGameSceneLoaded();
     cameraSystem();
+    return true;
 }
 
 void Engine::initInputMap() {
@@ -591,7 +614,10 @@ TextureHandle Engine::getEditorDefaultTexture() {
 void Engine::eventSystem() {
     for (const Event& event : eventQueue.drain()) {
         if (event.type == EventType::KeyChanged) {
-            const bool keyboardCaptured = imguiInitialized && editorWantsKeyboardCapture();
+            bool keyboardCaptured = false;
+#if !defined(SIMPLEENGINE_PLAYER_ONLY)
+            keyboardCaptured = imguiInitialized && editorWantsKeyboardCapture();
+#endif
             if (event.key.key == GLFW_KEY_ESCAPE && event.key.pressed) {
                 glfwSetWindowShouldClose(window, true);
             }
@@ -1002,7 +1028,9 @@ void Engine::cleanup() {
     if (glContext.isAttached()) {
         glContext.makeCurrent();
     }
+#if !defined(SIMPLEENGINE_PLAYER_ONLY)
     shutdownImGui();
+#endif
     renderer.cleanup();
     audioSystem.clear();
     resources.clear();
