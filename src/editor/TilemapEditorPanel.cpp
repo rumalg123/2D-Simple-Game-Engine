@@ -15,6 +15,12 @@ void Engine::renderTilemapEditorPanel() {
         return;
     }
     TilemapComponent& map = *scene.getTilemap(selectedEntity);
+    if (tileResizeSelection != selectedEntity) {
+        tileResizeSelection = selectedEntity;
+        tileResizeWidth = std::clamp(map.columns,1,TilemapTools::MaxDimension);
+        tileResizeHeight = std::clamp(map.rows,1,TilemapTools::MaxDimension);
+        tileStrokeActive = false;
+    }
     const bool editable = !playSession.active();
     if (!editable) ImGui::TextDisabled("Stop Play Mode to paint the authored scene.");
 
