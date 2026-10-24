@@ -75,6 +75,7 @@ private:
     void initScripts();
     void initPlugins();
     bool initImGui();
+    bool editorWantsKeyboardCapture() const;
     void shutdownImGui();
     void beginUiFrame();
     void renderUi();
