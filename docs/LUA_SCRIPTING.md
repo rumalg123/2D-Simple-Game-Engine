@@ -67,6 +67,8 @@ simulation. Runtime changes are discarded after editor Stop.
 | \`engine.get_float("speed", 2.0)\` | Numeric Script component parameter or fallback |
 | \`engine.set_float("speed", 3.0)\` | Updates that component parameter |
 | \`engine.entity_guid()\` | Persistent GUID of current entity |
+| \`engine.tile_at(col, row)\` | Reads tile index on this entity's Tilemap, or -1 for absent/empty |
+| \`engine.set_tile(col, row, value)\` | Paints owning entity's Tilemap; returns true when a cell changes |
 | \`engine.log("message")\` | Writes a diagnostic to stderr |
 
 For projects with no native \`IGame\`, these mappings are installed by default:
