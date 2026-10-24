@@ -66,6 +66,10 @@ Use the Tilemap Painter's **Enable Terrain / Terrain Paint / Terrain Erase**
 controls, **Add Tile Layer** in Scene Hierarchy, and the **Named Animation
 Clips** section of Sprite Animation Timeline.
 
+**Try it immediately:** [Terrain + Clips Demo](examples/terrain-clip-demo/README.md)
+is an openable project with connected terrain, separate draw layers, Lua
+movement and named Idle/Run animation clips.
+
 See [Terrain, Clips & Layers](docs/TERRAIN_CLIPS_LAYERS.md) for exact atlas
 mask ordering, CLI/gameplay examples, compatibility and limitations.
 
