@@ -143,15 +143,29 @@ bool ProjectManager::open(const std::filesystem::path& root,
         }
     }
 
-    const auto assetRoot = canonicalRoot / config.assetRoot;
-    if (!std::filesystem::is_directory(assetRoot)) {
-        error = "Project asset folder is missing.";
+    const auto assetRoot = std::filesystem::weakly_canonical(canonicalRoot / config.assetRoot, ec);
+    if (ec || !std::filesystem::is_directory(assetRoot) ||
+        !isInside(canonicalRoot, assetRoot)) {
+        error = "Project asset folder is missing or resolves outside the project.";
         return false;
     }
 
-    config.assetRoot = assetRoot.lexically_normal().string();
-    config.prefabDirectory = (canonicalRoot / config.prefabDirectory).lexically_normal().string();
-    config.editorLayoutPath = (canonicalRoot / config.editorLayoutPath).lexically_normal().string();
+    const auto prefabRoot = std::filesystem::weakly_canonical(
+        canonicalRoot / config.prefabDirectory, ec);
+    if (ec || !isInside(canonicalRoot, prefabRoot)) {
+        error = "Project prefab folder resolves outside the project.";
+        return false;
+    }
+    const auto layoutPath = std::filesystem::weakly_canonical(
+        canonicalRoot / config.editorLayoutPath, ec);
+    if (ec || !isInside(canonicalRoot, layoutPath)) {
+        error = "Project editor layout resolves outside the project.";
+        return false;
+    }
+
+    config.assetRoot = assetRoot.string();
+    config.prefabDirectory = prefabRoot.string();
+    config.editorLayoutPath = layoutPath.string();
     project = {canonicalRoot, canonicalRoot.filename().string(), config};
     return true;
 }
