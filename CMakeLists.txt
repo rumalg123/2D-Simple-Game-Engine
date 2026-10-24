@@ -17,6 +17,7 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
+    src/SceneEditSession.cpp
     src/PhysicsSystem.cpp
     src/Memory.cpp
     src/Game.cpp
@@ -194,6 +195,11 @@ target_link_libraries(simpleengine_project PRIVATE se_runtime)
 add_executable(project_manager_tests tests/ProjectManagerTests.cpp)
 target_link_libraries(project_manager_tests PRIVATE se_runtime)
 add_test(NAME project_manager_tests COMMAND project_manager_tests)
+
+# GUID, non-destructive Play Mode, scene history, legacy serializer tests.
+add_executable(scene_authoring_tests tests/SceneAuthoringTests.cpp)
+target_link_libraries(scene_authoring_tests PRIVATE se_runtime)
+add_test(NAME scene_authoring_tests COMMAND scene_authoring_tests)
 
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
