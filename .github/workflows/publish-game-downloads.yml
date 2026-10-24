@@ -89,7 +89,7 @@ jobs:
 
           $packages = @(
             @{ Name = 'SimpleEngine-Windows-x64'; Exe = 'engine.exe'; Config = 'demo.game.json'; Assets = 'assets'; Readme = 'README.md'; Missing = $false }
-            @{ Name = 'SimpleEngineEditor-Windows-x64'; Exe = 'SimpleEngineEditor.exe'; Config = 'demo.game.json'; Assets = 'assets'; Readme = 'README.md'; Missing = $false; Mode = 'editor' }
+            @{ Name = 'SimpleEngineEditor-Windows-x64'; Exe = 'SimpleEngineEditor.exe'; Config = ''; Assets = 'assets'; Readme = 'README.md'; Missing = $false; Mode = 'editor' }
             @{ Name = 'SimpleEnginePlayer-Windows-x64'; Exe = 'SimpleEnginePlayer.exe'; Config = 'examples/player-scene/game.config.json'; Assets = 'examples/player-scene/assets'; Readme = 'examples/player-scene/README.md'; Missing = $false; Mode = 'player' }
             @{ Name = 'SnakeSample-Windows-x64'; Exe = 'snake_sample.exe'; Config = 'samples/snake/snake.game.json'; Assets = 'samples/snake/assets'; Readme = 'samples/snake/README.md'; Missing = $true }
             @{ Name = 'FlappyBirdSample-Windows-x64'; Exe = 'flappy_bird_sample.exe'; Config = 'samples/flappy_bird/flappy_bird.game.json'; Assets = 'samples/flappy_bird/assets'; Readme = 'samples/flappy_bird/README.md'; Missing = $true }
@@ -145,7 +145,7 @@ jobs:
 
           Windows x64 downloads:
           - SimpleEngine-Windows-x64.zip: demo/editor application
-          - SimpleEngineEditor-Windows-x64.zip: standalone editor executable
+          - SimpleEngineEditor-Windows-x64.zip: project editor with New/Open Project launcher
           - SimpleEnginePlayer-Windows-x64.zip: editor-free player with a sample JSON scene
           - SnakeSample-Windows-x64.zip: standalone Snake game
           - FlappyBirdSample-Windows-x64.zip: standalone Flappy Bird game
