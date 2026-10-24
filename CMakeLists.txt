@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.18)
 
 project(SimpleEngine LANGUAGES C CXX)
 
@@ -9,6 +9,8 @@ set(CMAKE_CXX_EXTENSIONS ON)
 enable_testing()
 
 find_package(Threads REQUIRED)
+# Pin to the Lua 5.4 ABI, which MSYS2 distributes separately from Lua 5.5.
+find_package(Lua 5.4 EXACT REQUIRED)
 
 # First stage of the editor/runtime split. Runtime components compile without
 # Dear ImGui, and can be linked directly by headless applications and tests.
@@ -32,6 +34,7 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/SceneSerializer.cpp
     src/Prefab.cpp
     src/ScriptSystem.cpp
+    src/LuaScriptRuntime.cpp
     src/InputMap.cpp
     src/PluginSystem.cpp
     src/glad.c
@@ -53,12 +56,14 @@ target_include_directories(se_runtime PUBLIC
     include
     include/engine
 )
+target_include_directories(se_runtime PRIVATE ${LUA_INCLUDE_DIR})
 target_link_libraries(se_runtime PUBLIC
     glfw3
     opengl32
     gdi32
     winmm
     Threads::Threads
+    ${LUA_LIBRARIES}
 )
 add_library(SimpleEngine::Runtime ALIAS se_runtime)
 
@@ -200,6 +205,12 @@ add_test(NAME project_manager_tests COMMAND project_manager_tests)
 add_executable(scene_authoring_tests tests/SceneAuthoringTests.cpp)
 target_link_libraries(scene_authoring_tests PRIVATE se_runtime)
 add_test(NAME scene_authoring_tests COMMAND scene_authoring_tests)
+
+# Headless tests: Lua script lifecycle, entity isolation, input, errors and
+# independent project-generated gameplay without Dear ImGui or a graphics window.
+add_executable(lua_gameplay_tests tests/LuaGameplayTests.cpp)
+target_link_libraries(lua_gameplay_tests PRIVATE se_runtime)
+add_test(NAME lua_gameplay_tests COMMAND lua_gameplay_tests)
 
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
