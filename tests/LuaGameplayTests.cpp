@@ -120,9 +120,9 @@ end
 
         // Runtime errors and infinite loops must not hang the game or spam logs.
         write(scriptsPath / "Throw.lua",
-              "function on_update(dt) error('deliberate test error') end\\n");
+              "function on_update(dt) error('deliberate test error') end\n");
         write(scriptsPath / "Infinite.lua",
-              "function on_update(dt) while true do end end\\n");
+              "function on_update(dt) while true do end end\n");
         LuaScriptRuntime failureLua;
         ScriptSystem failureScripts;
         errors.clear();
