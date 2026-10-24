@@ -61,6 +61,21 @@ Status values:
   native Lua gameplay scripting, project export and Recent Projects UX.
 - See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full workflow.
 
+## Lua Gameplay Scripting (This PR)
+
+- **Implemented:** Embedded Lua 5.4 per-entity runtime with lifecycle hooks,
+  input, transform, parameters, stable GUID API and diagnostic logging.
+- **Implemented:** Automatic scanning of `Assets/Scripts/*.lua`, dedicated
+  script syntax checks, editor reload/create/attach workflow.
+- **Implemented:** New game projects include Lua-driven WelcomeController
+  and the standalone player executes the same project script.
+- **Implemented:** `simpleengine_project validate` checks scene/script
+  references; new CTest checks lifecycle, per-entity isolation, input.
+- **Implemented:** MSYS2 Lua 5.4 CI dependency, runtime DLL bundling and
+  Lua MIT license inclusion in release archives.
+- **Next:** Typed events, native plugin API, component handles and hot reload.
+- Details: [Lua Gameplay Scripting](docs/LUA_SCRIPTING.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.

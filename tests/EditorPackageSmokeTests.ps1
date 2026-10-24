@@ -22,6 +22,8 @@ if ($LASTEXITCODE -and $LASTEXITCODE -ne 0) {
 
 $exe = Join-Path $packagePath $executableName
 $launcher = Join-Path $packagePath "launch.bat"
+$luaNotice = Join-Path $packagePath "licenses/Lua.txt"
+if (!(Test-Path -LiteralPath $luaNotice)) { throw "Packaged editor must include Lua license." }
 $manifestPath = Join-Path $packagePath "manifest.json"
 foreach ($required in @($exe, $launcher, $manifestPath)) {
     if (!(Test-Path -LiteralPath $required)) {

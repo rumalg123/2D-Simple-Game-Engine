@@ -77,6 +77,9 @@ void Engine::renderPlayPausePanel() {
 
     ImGui::SameLine();
     ImGui::Checkbox("Hot Reload", &hotReloadEnabled);
+    ImGui::SameLine();
+    if (ImGui::Button("Reload Lua Scripts")) reloadLuaScripts();
+    ImGui::TextDisabled("Lua: Assets/Scripts/*.lua (per-entity runtime)");
 
     if (ImGui::CollapsingHeader("Physics Settings")) {
         PhysicsSettings physicsSettings = physicsSystem.getSettings();

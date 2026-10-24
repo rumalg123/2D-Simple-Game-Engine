@@ -21,6 +21,7 @@
 #include "Scene.h"
 #include "SceneEditSession.h"
 #include "ScriptSystem.h"
+#include "LuaScriptRuntime.h"
 #include <cstddef>
 #include <memory>
 #include <string>
@@ -48,6 +49,7 @@ private:
     EventQueue eventQueue;
     PrefabRegistry prefabs;
     ScriptSystem scriptSystem;
+    std::unique_ptr<LuaScriptRuntime> luaRuntime;
     InputMap inputMap;
     AudioSystem audioSystem;
     PluginManager pluginManager;
@@ -82,6 +84,7 @@ private:
     void recordSceneEdit();
     void initInputMap();
     void initScripts();
+    void reloadLuaScripts();
     void initPlugins();
     bool initImGui();
     bool editorWantsKeyboardCapture() const;

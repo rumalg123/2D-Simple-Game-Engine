@@ -120,6 +120,15 @@ if ($ResolvedReadmePath -and (Test-Path -LiteralPath $ResolvedReadmePath)) {
     Copy-Item -LiteralPath $ResolvedReadmePath -Destination (Join-Path $PackagePath "README.md") -Force
 }
 
+# Lua is dynamically linked by the editor/player and game binaries. Keep
+# its MIT license with every distributable copy of the runtime library.
+$LuaLicense = Join-Path $RepoRoot "third_party_licenses/Lua.txt"
+if (Test-Path -LiteralPath $LuaLicense) {
+    $LicenseDir = Join-Path $PackagePath "licenses"
+    New-Item -ItemType Directory -Force -Path $LicenseDir | Out-Null
+    Copy-Item -LiteralPath $LuaLicense -Destination (Join-Path $LicenseDir "Lua.txt") -Force
+}
+
 $LaunchCommand = "`"$ExecutableName`""
 if ($PackagedConfigFileName) {
     $ModeArgument = switch ($LaunchMode) {

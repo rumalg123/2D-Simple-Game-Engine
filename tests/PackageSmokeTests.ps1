@@ -77,6 +77,7 @@ Assert-PathExists (Join-Path $PackagePath "manifest.json") "Package manifest sho
 Assert-PathExists (Join-Path $PackagePath "game.config.json") "Package config should be created."
 Assert-PathExists (Join-Path $PackagePath "assets") "Package assets directory should be created."
 Assert-PathExists (Join-Path $PackagePath "README.md") "Package README should be copied."
+Assert-PathExists (Join-Path $PackagePath "licenses/Lua.txt") "Lua runtime license must be included."
 
 $dlls = Get-ChildItem -LiteralPath $PackagePath -Filter "*.dll"
 Assert-True ($dlls.Count -gt 0) "Package should include runtime DLLs."
