@@ -3,10 +3,61 @@
 #include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <regex>
+#include <sstream>
+#include <iomanip>
+#include <cstdint>
 #include <set>
 #include <string>
 
 namespace {
+std::string fingerprint(const std::filesystem::path& path) {
+    std::ifstream file(path,std::ios::binary);
+    if(!file) return {};
+    std::uint64_t result=14695981039346656037ULL;
+    char data[8192];
+    while(file) {
+        file.read(data,sizeof(data));
+        for(std::streamsize i=0;i<file.gcount();++i) {
+            result^=static_cast<unsigned char>(data[i]);
+            result*=1099511628211ULL;
+        }
+    }
+    std::ostringstream out;
+    out<<std::hex<<std::setfill('0')<<std::setw(16)<<result;
+    return out.str();
+}
+std::vector<std::string> discoverDependencies(
+    const AssetManifest& manifest, const AssetManifestEntry& entry,
+    const std::filesystem::path& file) {
+    std::set<std::string> referenced;
+    if(entry.type==AssetType::AnimationClip &&
+       !entry.animationClip.spriteSheetId.empty())
+        referenced.insert(entry.animationClip.spriteSheetId);
+    if(entry.type!=AssetType::Scene && entry.type!=AssetType::Prefab)
+        return {referenced.begin(),referenced.end()};
+    std::error_code ec;
+    if(std::filesystem::file_size(file,ec)>8*1024*1024 || ec)
+        return {referenced.begin(),referenced.end()};
+    std::ifstream input(file);
+    if(!input) return {referenced.begin(),referenced.end()};
+    const std::string data((std::istreambuf_iterator<char>(input)),
+                           std::istreambuf_iterator<char>());
+    const std::regex textures(R"ASSET("textureName"\s*:\s*"([^"]+)")ASSET");
+    const std::regex scripts(R"ASSET("scriptName"\s*:\s*"([^"]+)")ASSET");
+    for(std::sregex_iterator i(data.begin(),data.end(),textures), end;i!=end;++i) {
+        const std::string name=(*i)[1].str();
+        if(name.rfind("texture:",0)==0 || name.rfind("spritesheet:",0)==0)
+            referenced.insert(name);
+    }
+    for(std::sregex_iterator i(data.begin(),data.end(),scripts),end;i!=end;++i) {
+        const auto name=(*i)[1].str();
+        if(name.empty()) continue;
+        const auto* script=manifest.findByPath("Scripts/"+name+".lua");
+        referenced.insert(script ? script->id : "script:scripts/"+name);
+    }
+    return {referenced.begin(),referenced.end()};
+}
 bool insideRoot(const std::filesystem::path& root,
                 const std::filesystem::path& file) {
     const auto relative=file.lexically_relative(root);
@@ -36,6 +87,15 @@ bool AssetWorkspace::sync(std::size_t& imported,std::string& error) {
     imported=0;
     try { imported=catalog_.scanDirectory(root_); }
     catch(const std::exception& e) {error=e.what();return false;}
+    // Build a deterministic dependency index from the project's scene/prefab
+    // source and animation clip metadata, not from a runtime-loaded scene.
+    const auto snapshot=catalog_.getEntries();
+    for(const auto& asset:snapshot) {
+        if(auto* mutableEntry=catalog_.findById(asset.id)) {
+            mutableEntry->dependencies=discoverDependencies(
+                catalog_,asset,root_/asset.path);
+        }
+    }
     return catalog_.saveToFile(AssetManifest::defaultManifestPath(root_).string(),error);
 }
 AssetAudit AssetWorkspace::audit() const {
@@ -65,7 +125,8 @@ AssetAudit AssetWorkspace::audit() const {
             result.errors.push_back(entry.id+" missing spriteSheet "+entry.animationClip.spriteSheetId);
         // Source fingerprints are advisory: developers can deliberately edit
         // assets between scans. A sync recomputes hashes without changing GUIDs.
-        if(entry.contentHash.empty()) ++result.changed;
+        if(entry.contentHash.empty() ||
+           fingerprint(file)!=entry.contentHash) ++result.changed;
     }
     return result;
 }
