@@ -3,6 +3,11 @@
 #include "ProjectManager.h"
 #include "ProjectValidation.h"
 
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#endif
+
 #include <filesystem>
 #include <iostream>
 #include <memory>
@@ -61,7 +66,17 @@ int main(int argc, char** argv) {
     // of the launching terminal's working directory.
     if (projectPath.empty() && (argc == 1 || verifyBundle)) {
         std::error_code ec;
-        const auto executable = std::filesystem::absolute(argv[0], ec);
+        std::filesystem::path executable = std::filesystem::absolute(argv[0], ec);
+#ifdef _WIN32
+        // PATH launches and Explorer do not necessarily set the process CWD
+        // to the EXE folder. Ask Windows for the actual module filename.
+        wchar_t moduleFilename[32768]{};
+        const DWORD count=GetModuleFileNameW(nullptr,moduleFilename,32768);
+        if(count>0 && count<32768) {
+            executable=moduleFilename;
+            ec.clear();
+        }
+#endif
         if (!ec) {
             const auto adjacent = executable.parent_path();
             if (std::filesystem::is_regular_file(adjacent / ProjectManager::ManifestName))
