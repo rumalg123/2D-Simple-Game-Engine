@@ -267,6 +267,11 @@ add_test(NAME asset_cli_smoke
         -P ${CMAKE_SOURCE_DIR}/tests/AssetCliSmokeTests.cmake
 )
 
+# Versioned compiled-artifact pipeline, incremental rebuild and texture import.
+add_executable(asset_import_tests tests/AssetImportPipelineTests.cpp)
+target_link_libraries(asset_import_tests PRIVATE se_runtime)
+add_test(NAME asset_import_pipeline_tests COMMAND asset_import_tests)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
