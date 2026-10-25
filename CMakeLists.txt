@@ -18,6 +18,7 @@ find_package(Lua 5.4 EXACT REQUIRED)
 set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AssetManifest.cpp
     src/AssetWorkspace.cpp
+    src/AssetImportPipeline.cpp
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
