@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
         if (argument == "--help" || argument == "-h") {
             std::cout << "SimpleEnginePlayer [--project <project-folder>] [--config <game.config.json>] [--scene <scene.json>]\n"
                          "Config and scene paths are resolved relative to the config directory.\n"
-                         "The player runs serialized scenes; Lua/game-project scripts are not yet supported.\n";
+                         "A packaged game auto-loads adjacent project.simple.json when launched without arguments.\n";
             return 0;
         }
         if ((argument == "--config" || argument == "--scene" || argument == "--project") && index + 1 < argc) {
@@ -48,6 +48,19 @@ int main(int argc, char** argv) {
         }
         std::cerr << "Unknown or incomplete argument: " << argument << '\n';
         return 1;
+    }
+
+    // Exported games carry project.simple.json beside their executable.
+    // With no CLI arguments, open that project automatically, independent
+    // of the launching terminal's working directory.
+    if (argc == 1) {
+        std::error_code ec;
+        const auto executable = std::filesystem::absolute(argv[0], ec);
+        if (!ec) {
+            const auto adjacent = executable.parent_path();
+            if (std::filesystem::is_regular_file(adjacent / ProjectManager::ManifestName))
+                projectPath = adjacent.string();
+        }
     }
 
     if (!projectPath.empty() && !configPath.empty()) {
@@ -67,6 +80,13 @@ int main(int argc, char** argv) {
         }
         config = project.config;
         configDirectory = project.root;
+        // Relative texture and other imported asset paths resolve from the
+        // packaged project, never an unrelated Explorer/terminal directory.
+        std::filesystem::current_path(project.root, ec);
+        if (ec) {
+            std::cerr << "Cannot enter game project directory: " << ec.message() << '\\n';
+            return 1;
+        }
     }
 
     if (!configPath.empty()) {
