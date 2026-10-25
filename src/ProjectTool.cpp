@@ -21,6 +21,7 @@ int main(int argc, char** argv) {
                   << "  simpleengine_project assets-sync <project-directory>\n"
                   << "  simpleengine_project assets-audit <project-directory>\n"
                   << "  simpleengine_project assets-list <project-directory>\n"
+                  << "  simpleengine_project assets-deps <project-directory> <asset-id>\n"
                   << "  simpleengine_project assets-move <project-directory> <asset-id> <new-asset-path>\n";
         return 2;
     }
@@ -34,6 +35,8 @@ int main(int argc, char** argv) {
     } else if ((operation == "info" || operation == "validate" ||
                 operation == "assets-sync" || operation == "assets-audit" ||
                 operation == "assets-list") && argc == 3) {
+        success = ProjectManager::open(argv[2], project, error);
+    } else if (operation == "assets-deps" && argc == 4) {
         success = ProjectManager::open(argv[2], project, error);
     } else if (operation == "assets-move" && argc == 5) {
         success = ProjectManager::open(argv[2], project, error);
@@ -69,6 +72,22 @@ int main(int argc, char** argv) {
                 return 1;
             }
             std::cout << "Moved asset " << argv[3] << " -> " << argv[4] << '\n';
+            return 0;
+        }
+        if(operation=="assets-deps") {
+            const std::string target=argv[3];
+            const auto* asset=assets.index().findById(target);
+            if(!asset) {
+                std::cerr<<"Unknown asset ID: "<<target<<'\n';
+                return 1;
+            }
+            std::cout<<"Asset "<<target<<" ["<<asset->guid<<"] "<<asset->path<<'\n';
+            for(const auto& dependency:asset->dependencies)
+                std::cout<<"  depends on: "<<dependency<<'\n';
+            for(const auto& item:assets.index().getEntries())
+                for(const auto& ref:item.dependencies)
+                    if(ref==target)
+                        std::cout<<"  referenced by: "<<item.id<<" ("<<item.path<<")\n";
             return 0;
         }
         if(operation=="assets-list") {
