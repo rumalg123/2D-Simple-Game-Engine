@@ -994,6 +994,9 @@ AssetType AssetManifest::assetTypeFromString(const std::string& type) {
     if (normalized == "scene") {
         return AssetType::Scene;
     }
+    if (normalized == "script") {
+        return AssetType::Script;
+    }
     return AssetType::Unknown;
 }
 
