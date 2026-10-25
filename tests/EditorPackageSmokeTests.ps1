@@ -43,4 +43,14 @@ $manifest = Get-Content -Raw -LiteralPath $manifestPath | ConvertFrom-Json
 if ($manifest.config -ne '' -or $manifest.executable -ne $executableName) {
     throw "Editor package manifest incorrectly references a config file."
 }
+# The downloadable editor ZIP must include the player, project CLI and
+# exporter so non-developers can build games from the editor UI.
+& (Join-Path $RepoRoot "tools/bundle-export-toolkit.ps1") -EditorPackage $packagePath -BuildDir $BuildDir -RepoRoot $RepoRoot
+foreach($required in @("SimpleEnginePlayer.exe", "simpleengine_project.exe",
+                        "tools/export-project.ps1", "third_party_licenses/Lua.txt")) {
+    if(!(Test-Path -LiteralPath (Join-Path $packagePath $required) -PathType Leaf)) {
+        throw "Editor authoring/export toolkit is missing: $required"
+    }
+}
+
 Write-Host "Editor Project Hub packaging smoke test passed: $packagePath"
