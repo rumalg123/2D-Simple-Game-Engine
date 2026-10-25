@@ -53,4 +53,21 @@ foreach($required in @("SimpleEnginePlayer.exe", "simpleengine_project.exe",
     }
 }
 
+# The editor ZIP must export games *without* access to this source checkout.
+$projectBase=Join-Path $OutputDir "toolkit_projects"
+New-Item -ItemType Directory -Path $projectBase -Force | Out-Null
+& (Join-Path $packagePath "simpleengine_project.exe") create $projectBase "EditorBuiltGame"
+if($LASTEXITCODE -ne 0) { throw "Packaged project CLI could not create a game." }
+$sourceGame=Join-Path $projectBase "EditorBuiltGame"
+$exportRoot=Join-Path $OutputDir "toolkit_exports"
+& (Join-Path $packagePath "tools/export-project.ps1") -ProjectPath $sourceGame -BuildDir $packagePath -OutputDir $exportRoot -SkipBuild -NoZip
+$exportedExe=Join-Path $exportRoot "EditorBuiltGame/EditorBuiltGame.exe"
+if(!(Test-Path -LiteralPath $exportedExe -PathType Leaf)) {
+    throw "Prebuilt editor toolkit did not export a playable EXE."
+}
+& $exportedExe --verify-bundle
+if($LASTEXITCODE -ne 0) {
+    throw "Prebuilt editor toolkit exported a broken game."
+}
+
 Write-Host "Editor Project Hub packaging smoke test passed: $packagePath"
