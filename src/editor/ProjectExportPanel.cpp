@@ -29,6 +29,9 @@ void Engine::renderProjectExportPanel() {
     if (playSession.active()) {
         ImGui::TextDisabled("Stop Play Mode before building from saved scene data.");
     }
+    static bool useCompiledTextures = true;
+    ImGui::Checkbox("Use compiled texture artifacts",&useCompiledTextures);
+    ImGui::TextDisabled("Optimized RGBA textures stay in the ZIP next to source assets.");
     ImGui::BeginDisabled(playSession.active());
     if (ImGui::Button("Build Windows Game")) {
         wchar_t executableBuffer[32768]{};
@@ -55,7 +58,8 @@ void Engine::renderProjectExportPanel() {
                     L"\" -ProjectPath \"" + projectRoot.wstring() +
                     L"\" -BuildDir \"" + editorDir.wstring() +
                     L"\" -OutputDir \"" + exportDir.wstring() +
-                    L"\" -SkipBuild";
+                    L"\" -SkipBuild" +
+                    (useCompiledTextures ? L" -UseImportedTextures" : L"");
                 std::vector<wchar_t> mutableCommand(command.begin(),command.end());
                 mutableCommand.push_back(L'\0');
                 STARTUPINFOW startup{};

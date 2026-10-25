@@ -43,6 +43,12 @@ struct AudioMetadata {
     float volume = 1.0f;
 };
 
+struct TextureImportSettings {
+    int maxDimension = 4096; // maximum width/height after import
+    bool flipY = false;
+    bool premultiplyAlpha = false;
+};
+
 struct AssetManifestEntry {
     std::string id;
     // Path-independent identity and source fingerprint. Legacy ID remains
@@ -58,6 +64,7 @@ struct AssetManifestEntry {
     AnimationClipMetadata animationClip;
     FontMetadata font;
     AudioMetadata audio;
+    TextureImportSettings textureImport;
 };
 
 class AssetManifest {
@@ -82,6 +89,9 @@ public:
     AssetManifestEntry* findByPath(const std::string& path);
     const std::vector<AssetManifestEntry>& getEntries() const;
     std::size_t entryCount() const;
+    bool updateTextureSettings(const std::string& id,
+                               const TextureImportSettings& settings,
+                               std::string& error);
     bool needsUpgrade() const { return needsUpgrade_; }
 
     static AssetType inferAssetType(const std::filesystem::path& path);

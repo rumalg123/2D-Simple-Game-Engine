@@ -18,6 +18,7 @@ find_package(Lua 5.4 EXACT REQUIRED)
 set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AssetManifest.cpp
     src/AssetWorkspace.cpp
+    src/AssetImportPipeline.cpp
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
@@ -265,6 +266,18 @@ add_test(NAME asset_cli_smoke
         -DWORK=${CMAKE_BINARY_DIR}/asset_cli_smoke
         -P ${CMAKE_SOURCE_DIR}/tests/AssetCliSmokeTests.cmake
 )
+
+# Versioned compiled-artifact pipeline, incremental rebuild and texture import.
+add_executable(asset_import_tests tests/AssetImportPipelineTests.cpp)
+target_link_libraries(asset_import_tests PRIVATE se_runtime)
+add_test(NAME asset_import_pipeline_tests COMMAND asset_import_tests)
+add_test(NAME asset_import_cli_smoke
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_CLI=$<TARGET_FILE:simpleengine_project>
+        -DWORK=${CMAKE_BINARY_DIR}/asset_import_cli_smoke
+        -P ${CMAKE_SOURCE_DIR}/tests/AssetImportCliSmokeTests.cmake
+)
+
 
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp

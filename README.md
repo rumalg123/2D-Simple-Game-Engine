@@ -54,6 +54,26 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Compiled Asset Imports and Incremental Cache (Phase 11)
+
+SimpleEngine now compiles imported textures into a versioned binary RGBA
+format, tracks cache keys by source fingerprint, importer settings,
+platform and dependencies, and reuses unchanged build artifacts.
+The disposable `.simpleengine/cache/` folder is outside your game's Assets.
+
+Configure texture max size, Y-flip and alpha premultiplication through
+the editor's **Asset Browser** or the project CLI. In **Build Game**,
+choose **Use compiled texture artifacts** to ship and reference them in
+your Windows game without changing the original scene JSON.
+
+```powershell
+.\build\simpleengine_project.exe assets-build "C:\Games\MyGame"
+.\build\simpleengine_project.exe assets-clean "C:\Games\MyGame"
+```
+
+See [Compiled Asset Import Pipeline](docs/ASSET_IMPORT_PIPELINE.md) for
+binary artifact details, supported transforms, cache invalidation and
+export limitations.
 ## Persistent Asset Database, GUIDs and Dependency Inspection
 
 SimpleEngine now tracks project assets using persistent random GUIDs alongside

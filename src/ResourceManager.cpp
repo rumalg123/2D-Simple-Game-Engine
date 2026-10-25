@@ -4,6 +4,7 @@
 #include "third_party/stb_image.h"
 
 #include <filesystem>
+#include <cstdint>
 #include <fstream>
 #include <stdexcept>
 #include <string>
@@ -59,7 +60,47 @@ bool loadTextPpm(const std::string& path, TextureResource& texture) {
     return true;
 }
 
+// Versioned, exact-size RGBA import artifact. Bounds checks matter here:
+// compiled resources are data files and may be opened from untrusted projects.
+bool loadImportedTexture(const std::string& path,TextureResource& texture,
+                         std::string& error) {
+    std::ifstream file(path,std::ios::binary|std::ios::ate);
+    if(!file) {error="Cannot open imported texture: "+path;return false;}
+    const auto size=file.tellg();
+    if(size<16) {error="Imported texture is truncated: "+path;return false;}
+    file.seekg(0);
+    char header[16]{};
+    file.read(header,16);
+    if(!file || std::string(header,8)!="SEIMG001") {
+        error="Unsupported imported texture version: "+path;return false;
+    }
+    auto read32=[&](int offset) {
+        std::uint32_t value=0;
+        for(int i=0;i<4;++i)
+            value|=static_cast<std::uint32_t>(
+                static_cast<unsigned char>(header[offset+i]))<<(8*i);
+        return value;
+    };
+    const auto width=read32(8),height=read32(12);
+    if(width<1 || height<1 || width>8192 || height>8192 ||
+       static_cast<std::uint64_t>(width)*height*4+16!=
+          static_cast<std::uint64_t>(size)) {
+        error="Imported texture dimensions or byte count invalid: "+path;
+        return false;
+    }
+    texture.width=static_cast<int>(width);
+    texture.height=static_cast<int>(height);
+    texture.pixels.resize(static_cast<std::size_t>(width)*height*4);
+    file.read(reinterpret_cast<char*>(texture.pixels.data()),
+              static_cast<std::streamsize>(texture.pixels.size()));
+    if(!file) {error="Cannot read imported RGBA pixels: "+path;return false;}
+    return true;
+}
+
 bool loadPixelsFromFile(const std::string& path, TextureResource& texture, std::string& error) {
+    if (std::filesystem::path(path).extension()==".seimg")
+        return loadImportedTexture(path,texture,error);
+
     int width = 0;
     int height = 0;
     int channelCount = 0;

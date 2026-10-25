@@ -69,3 +69,6 @@ Thumbs.db
 .env
 .env.*
 
+
+# Disposable per-project import artifact cache
+.simpleengine/

@@ -90,30 +90,53 @@ if($relocatedScene.entities[0].sprite.texturePath -ne "Assets/Sprites/hero-moved
 & (Join-Path $movedGame "SmokeGame.exe") --verify-bundle
 if($LASTEXITCODE -ne 0) {throw "A game with a moved texture cannot validate its bundle."}
 
-# Reject invalid scripts, preserving a previous working export ZIP.
+# Compile game textures and package versioned RGBA artifacts.
+$compiledOutput=Join-Path $OutputDir 'compiled-exports'
+& $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $compiledOutput -SkipBuild -NoZip -UseImportedTextures
+$compiledGame=Join-Path $compiledOutput 'SmokeGame'
+$compiledScene=Get-Content -Raw -LiteralPath (Join-Path $compiledGame "Assets/Scenes/Main.scene.json") | ConvertFrom-Json
+$texturePath=[string]$compiledScene.entities[0].sprite.texturePath
+if($texturePath -notmatch '^Assets/Imported/[a-fA-F0-9]{32}[.]seimg$') {
+    throw "Compiled export did not remap the sprite texture: $texturePath"
+}
+$compiledFile=Join-Path $compiledGame $texturePath
+if(!(Test-Path -LiteralPath $compiledFile -PathType Leaf)) {
+    throw "Compiled texture artifact missing from game."
+}
+$fileBytes=[IO.File]::ReadAllBytes($compiledFile)
+if($fileBytes.Length -lt 20 -or
+   [Text.Encoding]::ASCII.GetString($fileBytes,0,8) -ne "SEIMG001") {
+    throw "Compiled texture has invalid header."
+}
+& (Join-Path $compiledGame "SmokeGame.exe") --verify-bundle
+if($LASTEXITCODE -ne 0) { throw "Compiled export is not a valid standalone game." }
+$originalScene=Get-Content -Raw -LiteralPath $sourceScene | ConvertFrom-Json
+if($originalScene.entities[0].sprite.texturePath -ne "Assets/Sprites/hero.ppm") {
+    throw "Export mutated the original project scene."
+}
+
+# Reject invalid scripts while preserving the prior working export.
 $existingZipHash=(Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash
 $badLua=Join-Path $project "Assets/Scripts/Invalid.lua"
 Set-Content -LiteralPath $badLua -Value "function broken( this is invalid" -Encoding ASCII
 $badOutput=Join-Path $OutputDir "invalid-output"
-# Native stderr is expected here: the child exporter must fail.
 $ErrorActionPreference="Continue"
 & powershell -NoProfile -ExecutionPolicy Bypass -File $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $badOutput -SkipBuild 2>&1 | Out-Null
 $negativeExit=$LASTEXITCODE
 $ErrorActionPreference="Stop"
 if($negativeExit -eq 0) { throw "Invalid Lua project was exported." }
 if(Test-Path -LiteralPath (Join-Path $badOutput "SmokeGame")) {
-    throw "Invalid game exported partial files."
+    throw "Invalid Lua exported partial files."
 }
 if((Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash -ne $existingZipHash) {
     throw "A failed export corrupted the existing game ZIP."
 }
 Remove-Item -LiteralPath $badLua -Force
-# Refuse arbitrary project files, including files commonly used for secrets.
+# Refuse hidden secret files.
 Set-Content -LiteralPath (Join-Path $project "Assets/.env") -Value "SECRET=do-not-publish" -Encoding ASCII
-# Native stderr is expected here: the child exporter must fail.
 $ErrorActionPreference="Continue"
 & powershell -NoProfile -ExecutionPolicy Bypass -File $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $badOutput -SkipBuild 2>&1 | Out-Null
 $negativeExit=$LASTEXITCODE
 $ErrorActionPreference="Stop"
 if($negativeExit -eq 0) { throw "Exporter included a hidden secrets file." }
-Write-Host "Portable export passed: standalone EXE, ZIP, Lua, asset hash inventory and failure isolation."
+Write-Host "Portable export passed: source game, compiled SEIMG, ZIP, hashes and failure isolation."

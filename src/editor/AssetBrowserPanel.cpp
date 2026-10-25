@@ -1,5 +1,6 @@
 #include "Engine.h"
 #include "AssetWorkspace.h"
+#include "AssetImportPipeline.h"
 #include "imgui.h"
 
 #include <algorithm>
@@ -69,6 +70,30 @@ void Engine::renderAssetBrowserPanel() {
     }
     ImGui::SameLine();
     ImGui::Checkbox("Auto Reload", &hotReloadEnabled);
+
+    ImGui::SeparatorText("Compiled Asset Pipeline");
+    const auto projectRoot = assetRoot.parent_path();
+    const bool independentProject =
+        std::filesystem::is_regular_file(projectRoot / "project.simple.json");
+    ImGui::BeginDisabled(!independentProject || playSession.active());
+    if(ImGui::Button("Build / Refresh Import Cache")) {
+        const auto report=AssetImportPipeline::build(projectRoot);
+        if(report.ok()) {
+            assetManifest.loadFromFile(manifestPath.string(),editorStatus);
+            editorStatus="Imported assets: "+std::to_string(report.built)+
+                " rebuilt, "+std::to_string(report.cached)+" reused; "+
+                std::to_string(report.outputBytes)+" artifact bytes.";
+        } else editorStatus="Asset import failed: "+report.errors.front();
+    }
+    ImGui::SameLine();
+    if(ImGui::Button("Clean Import Cache")) {
+        std::string error;
+        if(AssetImportPipeline::clean(projectRoot,"windows-x64",error))
+            editorStatus="Removed disposable Windows import cache.";
+        else editorStatus=error;
+    }
+    ImGui::EndDisabled();
+    ImGui::TextDisabled("Cached artifacts are outside Assets and regenerated as needed.");
 
     ImGui::SeparatorText("Asset Database");
     if (ImGui::Button("Audit Asset Database")) {
@@ -184,6 +209,36 @@ void Engine::renderAssetBrowserPanel() {
         ImGui::TextDisabled("GUID: %s  Hash: %s  Bytes: %llu",
                             entry.guid.c_str(), entry.contentHash.c_str(),
                             static_cast<unsigned long long>(entry.sourceBytes));
+        if(entry.type==AssetType::Texture) {
+            if(ImGui::TreeNode("Texture Import Settings")) {
+                static std::string editingGuid;
+                static int maxDimension=4096;
+                static bool flipY=false, premultiply=false;
+                if(editingGuid!=entry.guid) {
+                    editingGuid=entry.guid;
+                    maxDimension=entry.textureImport.maxDimension;
+                    flipY=entry.textureImport.flipY;
+                    premultiply=entry.textureImport.premultiplyAlpha;
+                }
+                ImGui::InputInt("Max Dimension",&maxDimension);
+                ImGui::Checkbox("Flip Image Vertically",&flipY);
+                ImGui::Checkbox("Premultiply Alpha",&premultiply);
+                if(ImGui::Button("Save Import Settings") && !playSession.active()) {
+                    AssetWorkspace workspace(assetRoot);
+                    std::string error;
+                    TextureImportSettings settings{
+                        maxDimension,flipY,premultiply
+                    };
+                    if(workspace.open(error) &&
+                       workspace.setTextureSettings(entry.id,settings,error)) {
+                        assetManifest=workspace.index();
+                        editorStatus="Saved texture importer settings for "+entry.id+
+                            ". Rebuild cache to apply.";
+                    } else editorStatus=error;
+                }
+                ImGui::TreePop();
+            }
+        }
         if (ImGui::SmallButton("Copy GUID"))
             ImGui::SetClipboardText(entry.guid.c_str());
         ImGui::SameLine();

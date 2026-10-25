@@ -664,6 +664,15 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
             return false;
         }
 
+        if (const JsonValue* settings = objectField(asset, "textureImport")) {
+            if(settings->type == JsonValue::Type::Object) {
+                entry.textureImport.maxDimension = readIntField(
+                    *settings,"maxDimension",4096);
+                entry.textureImport.flipY = readBoolField(*settings,"flipY",false);
+                entry.textureImport.premultiplyAlpha =
+                    readBoolField(*settings,"premultiplyAlpha",false);
+            }
+        }
         if (const JsonValue* metadata = objectField(asset, "spriteSheet")) {
             if (metadata->type == JsonValue::Type::Object) {
                 readSpriteSheetMetadata(*metadata, entry.spriteSheet);
@@ -734,6 +743,14 @@ bool AssetManifest::saveToFile(const std::string& path, std::string& error) cons
         output << "      \"type\": \"" << assetTypeToString(entry.type) << "\",\n";
         output << "      \"name\": \"" << escapeJson(entry.name) << "\",\n";
         output << "      \"path\": \"" << escapeJson(entry.path) << "\"";
+        if(entry.type == AssetType::Texture || entry.type == AssetType::SpriteSheet) {
+            output << ",\n      \"textureImport\": {";
+            output << "\"maxDimension\": " << entry.textureImport.maxDimension
+                   << ", \"flipY\": " << (entry.textureImport.flipY?"true":"false")
+                   << ", \"premultiplyAlpha\": "
+                   << (entry.textureImport.premultiplyAlpha?"true":"false")
+                   << "}";
+        }
 
         switch (entry.type) {
             case AssetType::SpriteSheet:
@@ -922,6 +939,20 @@ const std::vector<AssetManifestEntry>& AssetManifest::getEntries() const {
     return entries;
 }
 
+bool AssetManifest::updateTextureSettings(
+    const std::string& id,const TextureImportSettings& settings,
+    std::string& error) {
+    auto* entry=findById(id);
+    if(!entry || (entry->type!=AssetType::Texture &&
+                  entry->type!=AssetType::SpriteSheet)) {
+        error="Asset is not an importable texture: "+id;return false;
+    }
+    if(settings.maxDimension<1 || settings.maxDimension>8192) {
+        error="Texture maxDimension must be between 1 and 8192.";return false;
+    }
+    entry->textureImport=settings;
+    return true;
+}
 std::size_t AssetManifest::entryCount() const {
     return entries.size();
 }

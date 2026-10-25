@@ -152,6 +152,21 @@ Status values:
   resource GUIDs for scripts/scenes/prefabs, cross-platform exporters.
 - Guide: [Asset Database Workflow](docs/ASSET_DATABASE_WORKFLOW.md).
 
+## Asset Import Pipeline and Compiled Texture Export (This PR)
+
+- **Implemented:** Versioned binary RGBA texture artifact importer,
+  including max-dimension resizing, flipY and alpha premultiplication.
+- **Implemented:** Content-addressed per-platform artifact cache outside
+  game Assets, keyed by GUID/source/settings/dependency/importer version.
+- **Implemented:** Cache hits, dependency invalidation and cache cleanup.
+- **Implemented:** Runtime ResourceManager support for compiled `.seimg`.
+- **Implemented:** Editor/CLI import configuration and cache build actions.
+- **Implemented:** Optional compiled-texture ZIP export and scene rewriting,
+  plus compiled artifact map for deterministic packaging.
+- **Implemented:** Headless incremental import, CLI and compiled export tests.
+- **Next:** GPU texture compression/mips, import job parallelism, asset pack
+  stripping, native Linux game player and cross-platform export profiles.
+- Details: [Asset Import Pipeline](docs/ASSET_IMPORT_PIPELINE.md).
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.

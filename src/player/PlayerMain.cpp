@@ -100,6 +100,13 @@ int main(int argc, char** argv) {
             return 1;
         }
         if (verifyBundle) {
+            std::error_code verifyDirectoryError;
+            std::filesystem::current_path(project.root,verifyDirectoryError);
+            if(verifyDirectoryError) {
+                std::cerr<<"Cannot enter game folder: "
+                         <<verifyDirectoryError.message()<<'\n';
+                return 1;
+            }
             const ProjectValidationResult result = validateProject(project);
             for (const auto& issue : result.errors)
                 std::cerr << "Bundle validation: " << issue << '\n';
