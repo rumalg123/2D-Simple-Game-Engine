@@ -130,6 +130,13 @@ AssetAudit AssetWorkspace::audit() const {
     }
     return result;
 }
+bool AssetWorkspace::setTextureSettings(
+    const std::string& id,const TextureImportSettings& settings,
+    std::string& error) {
+    if(!catalog_.updateTextureSettings(id,settings,error)) return false;
+    return catalog_.saveToFile(
+        AssetManifest::defaultManifestPath(root_).string(),error);
+}
 bool AssetWorkspace::move(const std::string& id,const std::string& destination,
                           std::string& error) {
     const auto* entry=catalog_.findById(id);
