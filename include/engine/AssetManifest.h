@@ -82,6 +82,7 @@ public:
     AssetManifestEntry* findByPath(const std::string& path);
     const std::vector<AssetManifestEntry>& getEntries() const;
     std::size_t entryCount() const;
+    bool needsUpgrade() const { return needsUpgrade_; }
 
     static AssetType inferAssetType(const std::filesystem::path& path);
     static const char* assetTypeToString(AssetType type);
@@ -90,4 +91,5 @@ public:
 
 private:
     std::vector<AssetManifestEntry> entries;
+    bool needsUpgrade_ = false;
 };
