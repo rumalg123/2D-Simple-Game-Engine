@@ -73,6 +73,14 @@ bool AssetWorkspace::move(const std::string& id,const std::string& destination,
                           std::string& error) {
     const auto* entry=catalog_.findById(id);
     if(!entry) {error="No asset with ID "+id;return false;}
+    // Scene entrypoints and Lua script registration are still path-based;
+    // moving either would require modifying project manifests/scriptName.
+    // Restrict managed moves to path-independent file-backed resources.
+    if(entry->type==AssetType::Scene || entry->type==AssetType::Script ||
+       entry->type==AssetType::Prefab) {
+        error="Scene, Lua script and prefab moves are not supported yet; keep their project references intact.";
+        return false;
+    }
     const std::string previous=entry->path;
     if(!catalog_.moveAsset(root_,id,destination,error)) return false;
     if(!catalog_.saveToFile(
