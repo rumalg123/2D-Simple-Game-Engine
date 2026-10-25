@@ -117,27 +117,6 @@ try {
     require(!AssetImportPipeline::build(root,"../escape").ok(),
             "Unsafe platform token accepted");
 
-    require(AssetImportPipeline::clean(root,"windows-x64",error),
-            "Cannot clean Windows cache: "+error);
-    require(!std::filesystem::exists(
-        AssetImportPipeline::cacheRoot(root,"windows-x64")),
-        "Cache clean did not delete selected platform artifacts");
-    require(std::filesystem::exists(
-        AssetImportPipeline::cacheRoot(root,"linux-x64")),
-        "Cleaning Windows cache removed Linux artifacts");
-    const auto rebuilt=AssetImportPipeline::build(root);
-    require(rebuilt.ok() && rebuilt.built==2,
-            "Clean build did not recreate output artifacts");
-
-    // Do not accept truncated or oversized images as valid resource files.
-    const auto corrupt=root/"corrupt.seimg";
-    write(corrupt,"SEIMG001");
-    ResourceManager invalid;
-    bool rejected=false;
-    try {invalid.loadTextureFromFile("bad",corrupt.string());}
-    catch(const std::exception&) {rejected=true;}
-    require(rejected,"Truncated compiled texture was accepted");
-
     // Portable exports keep textureName for catalog identity, but the player
     // must honor an explicit compiled texturePath under Assets/Imported.
     std::filesystem::create_directories(root/"Assets/Imported");
@@ -171,6 +150,27 @@ try {
                     "Assets/Imported/")!=std::string::npos,
                 "Catalog lookup incorrectly overrode explicit compiled texture");
     }
+
+    require(AssetImportPipeline::clean(root,"windows-x64",error),
+            "Cannot clean Windows cache: "+error);
+    require(!std::filesystem::exists(
+        AssetImportPipeline::cacheRoot(root,"windows-x64")),
+        "Cache clean did not delete selected platform artifacts");
+    require(std::filesystem::exists(
+        AssetImportPipeline::cacheRoot(root,"linux-x64")),
+        "Cleaning Windows cache removed Linux artifacts");
+    const auto rebuilt=AssetImportPipeline::build(root);
+    require(rebuilt.ok() && rebuilt.built==2,
+            "Clean build did not recreate output artifacts");
+
+    // Do not accept truncated or oversized images as valid resource files.
+    const auto corrupt=root/"corrupt.seimg";
+    write(corrupt,"SEIMG001");
+    ResourceManager invalid;
+    bool rejected=false;
+    try {invalid.loadTextureFromFile("bad",corrupt.string());}
+    catch(const std::exception&) {rejected=true;}
+    require(rejected,"Truncated compiled texture was accepted");
 
     std::cout<<"Import cache, decoded RGBA, settings, source/dependency/platform invalidation and cleanup passed.\n";
     return 0;
