@@ -59,7 +59,7 @@ int main(int argc, char** argv) {
     // Exported games carry project.simple.json beside their executable.
     // With no CLI arguments, open that project automatically, independent
     // of the launching terminal's working directory.
-    if (argc == 1 || verifyBundle) {
+    if (projectPath.empty() && (argc == 1 || verifyBundle)) {
         std::error_code ec;
         const auto executable = std::filesystem::absolute(argv[0], ec);
         if (!ec) {
@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
         std::error_code chdirError;
         std::filesystem::current_path(project.root, chdirError);
         if (chdirError) {
-            std::cerr << "Cannot enter game project directory: " << chdirError.message() << '\\n';
+            std::cerr << "Cannot enter game project directory: " << chdirError.message() << '\n';
             return 1;
         }
     }
