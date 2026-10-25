@@ -28,8 +28,8 @@ runs serialized scenes without linking Dear ImGui. These targets are built
 alongside the existing `engine.exe`, Snake, Flappy Bird and starter executables.
 
 ```powershell
-.\build\SimpleEngineEditor.exe --config .\demo.game.json
-.\build\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
+.\build\ucrt64-debug\SimpleEngineEditor.exe --config .\demo.game.json
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
 ```
 
 ### New/Open Project
@@ -39,10 +39,10 @@ or create a starter project from the command line. New projects contain a
 playable scene and can be opened directly in the editor or player.
 
 ```powershell
-.\\build\\SimpleEngineEditor.exe
-.\\build\\simpleengine_project.exe create . MyFirstGame
-.\\build\\SimpleEngineEditor.exe --project .\\MyFirstGame
-.\\build\\SimpleEnginePlayer.exe --project .\\MyFirstGame
+.\build\ucrt64-debug\SimpleEngineEditor.exe
+.\build\ucrt64-debug\simpleengine_project.exe create . MyFirstGame
+.\build\ucrt64-debug\SimpleEngineEditor.exe --project .\MyFirstGame
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --project .\MyFirstGame
 ```
 
 In the editor, adjust the starter scene in Scene Hierarchy / Inspector and
@@ -99,10 +99,10 @@ hooks and call engine functions for movement, action input, numeric parameters,
 entity GUID and logging. Existing native C++ scripts still work.
 
 ```powershell
-.\build\simpleengine_project.exe create . MyLuaGame
-.\build\simpleengine_project.exe validate .\MyLuaGame
-.\build\SimpleEngineEditor.exe --project .\MyLuaGame
-.\build\SimpleEnginePlayer.exe --project .\MyLuaGame
+.\build\ucrt64-debug\simpleengine_project.exe create . MyLuaGame
+.\build\ucrt64-debug\simpleengine_project.exe validate .\MyLuaGame
+.\build\ucrt64-debug\SimpleEngineEditor.exe --project .\MyLuaGame
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --project .\MyLuaGame
 ```
 
 Use **Stop → Reload Lua Scripts → Play** to test Lua changes. The standalone
@@ -114,45 +114,96 @@ details, safety limits and Windows build requirements.
 
 ## Build
 
-```powershell
-cmake -S . -B build
-cmake --build build
+Use the **MSYS2 UCRT64** toolchain for this Windows C++17 project. The compiler,
+GLFW and Lua must all come from UCRT64; MINGW64 libraries belong to a different
+runtime. The presets assume MSYS2 is installed at `C:/msys64` and require
+CMake 3.21 or newer.
+
+Install the dependencies in an **MSYS2 UCRT64** terminal:
+
+```bash
+pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-gdb mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-lua54
 ```
 
-The executable is written to `build/engine.exe`. Assets are copied beside the executable after
-each build.
+Use `lua54`, which provides the required Lua 5.4 headers and library.
+
+### VS Code
+
+Open this repository folder and install the recommended **C/C++** and
+**CMake Tools** extensions. Run **CMake: Select Configure Preset** and choose
+**MSYS2 UCRT64 - Debug** if prompted.
+
+- **Ctrl+Shift+B** runs **Build Engine**, configuring and compiling all targets.
+- **F5** with **Debug Editor** opens the editor's New/Open Project launcher.
+  **Run Engine** launches the demo; **Debug Player (sample scene)** runs the
+  standalone player example. Each launch builds first and uses UCRT64 GDB.
+- **Tasks: Run Test Task > Test Engine** builds and runs the regression suite.
+
+IntelliSense gets each file's includes and definitions from CMake, with
+`build/ucrt64-debug/compile_commands.json` available as a fallback. The terminal
+profile **MSYS2 UCRT64** is also available in the terminal dropdown. Open a new
+terminal after reloading the workspace so the updated tool paths take effect.
+
+### PowerShell
+
+From the repository root:
+
+```powershell
+$env:PATH = "C:\msys64\ucrt64\bin;$env:PATH"
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
+.\build\ucrt64-debug\SimpleEngineEditor.exe
+```
+
+The presets explicitly select GCC, G++, Ninja and the UCRT64 dependency prefix,
+so they also work when another CMake or compiler appears earlier on the system
+PATH. They use `build/ucrt64-debug` and `build/ucrt64-release`, avoiding old
+generator/compiler caches in `build`. MinGW runtime DLLs are copied beside each
+executable automatically, and the demo's assets are copied after building it.
+
+For an optimized build, use:
+
+```powershell
+cmake --preset ucrt64-release
+cmake --build --preset ucrt64-release
+ctest --preset ucrt64-release
+```
+
+If MSYS2 is installed elsewhere, change `MSYS2_ROOT` in `CMakePresets.json`
+and the `C:/msys64` paths in `.vscode/*.json` to match the installation.
 
 Run the demo with the default editor-enabled configuration:
 
 ```powershell
-.\build\engine.exe --config .\demo.game.json
+.\build\ucrt64-debug\engine.exe --config .\demo.game.json
 ```
 
 Run the same game without editor panels:
 
 ```powershell
-.\build\engine.exe --config .\demo.game.json --runtime
+.\build\ucrt64-debug\engine.exe --config .\demo.game.json --runtime
 ```
 
 Build the separate Snake sample game:
 
 ```powershell
-cmake --build build --target snake_sample
-.\build\snake_sample.exe --config .\samples\snake\snake.game.json
+cmake --build --preset ucrt64-debug --target snake_sample
+.\build\ucrt64-debug\snake_sample.exe --config .\samples\snake\snake.game.json
 ```
 
 Build the separate Flappy Bird sample game:
 
 ```powershell
-cmake --build build --target flappy_bird_sample
-.\build\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
+cmake --build --preset ucrt64-debug --target flappy_bird_sample
+.\build\ucrt64-debug\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
 ```
 
 Build the reusable basic game template:
 
 ```powershell
-cmake --build build --target basic_game_template
-.\build\basic_game_template.exe --config .\templates\basic_game\basic_game.game.json
+cmake --build --preset ucrt64-debug --target basic_game_template
+.\build\ucrt64-debug\basic_game_template.exe --config .\templates\basic_game\basic_game.game.json
 ```
 
 ## Tests
@@ -160,8 +211,8 @@ cmake --build build --target basic_game_template
 Run the core regression tests with CTest:
 
 ```powershell
-cmake --build build --target engine_tests
-ctest --test-dir build --output-on-failure
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 ```
 
 The current test suite covers input action bindings, app mode config normalization, resource reuse,
@@ -186,25 +237,25 @@ The default output is:
 You can also run the CMake target after configuring the project:
 
 ```powershell
-cmake --build build --target package_game
+cmake --build --preset ucrt64-debug --target package_game
 ```
 
 Package the Snake sample as its own runtime game:
 
 ```powershell
-cmake --build build --target package_snake_sample
+cmake --build --preset ucrt64-debug --target package_snake_sample
 ```
 
 Package the Flappy Bird sample as its own runtime game:
 
 ```powershell
-cmake --build build --target package_flappy_bird_sample
+cmake --build --preset ucrt64-debug --target package_flappy_bird_sample
 ```
 
 Package the basic game template:
 
 ```powershell
-cmake --build build --target package_basic_game_template
+cmake --build --preset ucrt64-debug --target package_basic_game_template
 ```
 
 Or call the package script directly for a selected executable:

@@ -78,9 +78,9 @@ The existing Windows/MSYS2 UCRT64 workflow builds all executables, including
 the launcher and the editor-free player, then runs CTest:
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 ```
 
 The new project-scene test loads the generated scene with

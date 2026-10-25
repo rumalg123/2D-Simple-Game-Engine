@@ -9,6 +9,7 @@ set(CMAKE_CXX_EXTENSIONS ON)
 enable_testing()
 
 find_package(Threads REQUIRED)
+find_package(glfw3 3.3 CONFIG REQUIRED)
 # Pin to the Lua 5.4 ABI, which MSYS2 distributes separately from Lua 5.5.
 find_package(Lua 5.4 EXACT REQUIRED)
 
@@ -60,7 +61,7 @@ target_include_directories(se_runtime PUBLIC
 )
 target_include_directories(se_runtime PRIVATE ${LUA_INCLUDE_DIR})
 target_link_libraries(se_runtime PUBLIC
-    glfw3
+    glfw
     opengl32
     gdi32
     winmm
@@ -84,7 +85,7 @@ target_include_directories(se_editor_ui PUBLIC
     imgui
     imgui/backends
 )
-target_link_libraries(se_editor_ui PUBLIC glfw3)
+target_link_libraries(se_editor_ui PUBLIC glfw)
 add_library(SimpleEngine::EditorUI ALIAS se_editor_ui)
 
 # Editor-only panels and native editor plugin callbacks live outside the runtime.
@@ -256,6 +257,27 @@ add_executable(basic_game_template
 )
 
 target_link_libraries(basic_game_template PRIVATE engine_core)
+
+# Make locally built MinGW executables runnable from Explorer, plain PowerShell
+# and packaging scripts without depending on a globally modified PATH.
+if(MINGW)
+    get_filename_component(mingw_runtime_directory "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    get_property(engine_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(engine_target IN LISTS engine_targets)
+        get_target_property(engine_target_type ${engine_target} TYPE)
+        if(engine_target_type STREQUAL "EXECUTABLE")
+            add_custom_command(TARGET ${engine_target} POST_BUILD
+                COMMAND ${CMAKE_COMMAND}
+                    "-DEXECUTABLE=$<TARGET_FILE:${engine_target}>"
+                    "-DDESTINATION=$<TARGET_FILE_DIR:${engine_target}>"
+                    "-DRUNTIME_DIRECTORY=${mingw_runtime_directory}"
+                    "-DOBJDUMP=${CMAKE_OBJDUMP}"
+                    -P "${CMAKE_SOURCE_DIR}/cmake/CopyMinGWRuntime.cmake"
+                VERBATIM
+            )
+        endif()
+    endforeach()
+endif()
 
 add_custom_command(TARGET engine POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory

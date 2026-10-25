@@ -30,21 +30,21 @@ separate editor services.
 Windows/MSYS2 UCRT64:
 
 \`\`\`sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 \`\`\`
 
 Launch the editor (bundled demo):
 
 \`\`\`powershell
-.\build\SimpleEngineEditor.exe --config .\demo.game.json
+.\build\ucrt64-debug\SimpleEngineEditor.exe --config .\demo.game.json
 \`\`\`
 
 Launch the standalone player using the bundled example project:
 
 \`\`\`powershell
-.\build\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --config .\examples\player-scene\game.config.json
 \`\`\`
 
 The player supports \`--config PATH\`, \`--scene PATH\`, and \`--help\`.

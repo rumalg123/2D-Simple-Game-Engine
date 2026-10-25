@@ -93,6 +93,9 @@ brand-new project. It requires no graphics window and links only \`se_runtime\`.
 
 ## Building and distribution
 
+See [Build in VS Code or PowerShell](../README.md#build) for the UCRT64
+dependencies, compiler configuration, Debug/Release presets and build commands.
+
 A Lua 5.4 development library is now required at CMake configure time.
 Windows builds use the MSYS2 package
 \`mingw-w64-ucrt-x86_64-lua54\` (not the default Lua 5.5 package).

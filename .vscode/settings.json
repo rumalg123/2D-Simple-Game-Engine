@@ -1,0 +1,29 @@
+{
+  "cmake.cmakePath": "C:/msys64/ucrt64/bin/cmake.exe",
+  "cmake.ctestPath": "C:/msys64/ucrt64/bin/ctest.exe",
+  "cmake.useCMakePresets": "always",
+  "cmake.configureOnOpen": true,
+  "cmake.debugConfig": {
+    "MIMode": "gdb",
+    "miDebuggerPath": "C:/msys64/ucrt64/bin/gdb.exe",
+    "cwd": "${workspaceFolder}"
+  },
+  "C_Cpp.default.compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
+  "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+  "terminal.integrated.env.windows": {
+    "PATH": "C:/msys64/ucrt64/bin;${env:PATH}"
+  },
+  "terminal.integrated.profiles.windows": {
+    "MSYS2 UCRT64": {
+      "path": "C:/msys64/usr/bin/bash.exe",
+      "args": [
+        "--login",
+        "-i"
+      ],
+      "env": {
+        "MSYSTEM": "UCRT64",
+        "CHERE_INVOKING": "1"
+      }
+    }
+  }
+}

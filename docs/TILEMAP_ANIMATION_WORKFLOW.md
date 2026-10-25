@@ -79,9 +79,9 @@ and mask filtering, and collision events remain unchanged.
 ## Test coverage
 
 \`\`\`sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 \`\`\`
 
 The \`tilemap_animation_tests\` executable links **only** \`se_runtime\`.

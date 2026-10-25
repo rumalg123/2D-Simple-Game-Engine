@@ -1,0 +1,54 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Configure Engine",
+      "type": "process",
+      "command": "${config:cmake.cmakePath}",
+      "args": [
+        "--preset",
+        "ucrt64-debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "Build Engine",
+      "type": "process",
+      "command": "${config:cmake.cmakePath}",
+      "args": [
+        "--build",
+        "--preset",
+        "ucrt64-debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "Configure Engine",
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "problemMatcher": [
+        "$gcc"
+      ]
+    },
+    {
+      "label": "Test Engine",
+      "type": "process",
+      "command": "${config:cmake.ctestPath}",
+      "args": [
+        "--preset",
+        "ucrt64-debug"
+      ],
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "dependsOn": "Build Engine",
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

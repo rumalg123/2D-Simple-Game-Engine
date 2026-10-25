@@ -58,16 +58,16 @@ Windows + MSYS2 UCRT64 prerequisites are in the repository release workflow.
 To build and run the full regression suite:
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 ```
 
 To verify runtime-only compilation specifically:
 
 ```sh
-cmake --build build --target runtime_boundary_tests
-ctest --test-dir build --output-on-failure -R runtime_boundary_tests
+cmake --build --preset ucrt64-debug --target runtime_boundary_tests
+ctest --preset ucrt64-debug -R runtime_boundary_tests
 ```
 
 The extraction should be checked with a native Windows build before merging.

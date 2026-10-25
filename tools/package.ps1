@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-    [string]$BuildDir = "build",
+    [string]$BuildDir = "build/ucrt64-debug",
     [string]$OutputDir = "dist",
     [string]$PackageName = "SimpleEngine",
     [string]$ExecutableName = "engine.exe",
@@ -48,7 +48,7 @@ $PackagedConfigFileName = if ($GameConfig -and $PackageConfigName) { [System.IO.
 
 if (!$SkipBuild) {
     if (!(Test-Path -LiteralPath $BuildPath)) {
-        throw "Build directory does not exist: $BuildPath. Run 'cmake -S . -B build' first."
+        throw "Build directory does not exist: $BuildPath. Run 'cmake --preset ucrt64-debug' first, or pass -BuildDir for another configured build."
     }
 
     if ($BuildTarget) {

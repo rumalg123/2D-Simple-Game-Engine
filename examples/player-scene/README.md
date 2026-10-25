@@ -6,7 +6,7 @@ loads the scene JSON directly from a game configuration file.
 From the repository root after building:
 
 ```powershell
-.\build\SimpleEnginePlayer.exe --config examples\player-scene\game.config.json
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --config examples\player-scene\game.config.json
 ```
 
 The config paths resolve relative to its own directory, so this command can

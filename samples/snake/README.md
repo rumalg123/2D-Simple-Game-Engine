@@ -5,13 +5,13 @@ This sample is a separate game executable linked against `engine_core`. It inten
 Build:
 
 ```powershell
-cmake --build build --target snake_sample
+cmake --build --preset ucrt64-debug --target snake_sample
 ```
 
 Run runtime-only:
 
 ```powershell
-.\build\snake_sample.exe --config .\samples\snake\snake.game.json
+.\build\ucrt64-debug\snake_sample.exe --config .\samples\snake\snake.game.json
 ```
 
 Controls:

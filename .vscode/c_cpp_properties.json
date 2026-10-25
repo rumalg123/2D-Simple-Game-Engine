@@ -1,0 +1,22 @@
+{
+  "configurations": [
+    {
+      "name": "MSYS2 UCRT64",
+      "compilerPath": "C:/msys64/ucrt64/bin/g++.exe",
+      "configurationProvider": "ms-vscode.cmake-tools",
+      "compileCommands": "${workspaceFolder}/build/ucrt64-debug/compile_commands.json",
+      "includePath": [
+        "${workspaceFolder}/include",
+        "${workspaceFolder}/include/engine",
+        "${workspaceFolder}/imgui",
+        "${workspaceFolder}/imgui/backends",
+        "C:/msys64/ucrt64/include",
+        "C:/msys64/ucrt64/include/lua5.4"
+      ],
+      "cStandard": "c17",
+      "cppStandard": "gnu++17",
+      "intelliSenseMode": "windows-gcc-x64"
+    }
+  ],
+  "version": 4
+}

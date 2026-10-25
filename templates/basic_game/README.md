@@ -12,19 +12,19 @@ This is a minimal starting point for a new runtime game linked against `engine_c
 Build the template in this repository:
 
 ```powershell
-cmake --build build --target basic_game_template
+cmake --build --preset ucrt64-debug --target basic_game_template
 ```
 
 Run runtime-only:
 
 ```powershell
-.\build\basic_game_template.exe --config .\templates\basic_game\basic_game.game.json
+.\build\ucrt64-debug\basic_game_template.exe --config .\templates\basic_game\basic_game.game.json
 ```
 
 Package it:
 
 ```powershell
-cmake --build build --target package_basic_game_template
+cmake --build --preset ucrt64-debug --target package_basic_game_template
 ```
 
 To start a new game, copy this folder to `samples/my_game`, rename the source file and config, then add a CMake target that follows this pattern:

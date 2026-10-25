@@ -5,9 +5,9 @@ No C++ recompilation or manual scene setup is required after building the
 editor/player executables.
 
 ```powershell
-.\build\simpleengine_project.exe validate ".\examples\terrain-clip-demo"
-.\build\SimpleEngineEditor.exe --project ".\examples\terrain-clip-demo"
-.\build\SimpleEnginePlayer.exe --project ".\examples\terrain-clip-demo"
+.\build\ucrt64-debug\simpleengine_project.exe validate ".\examples\terrain-clip-demo"
+.\build\ucrt64-debug\SimpleEngineEditor.exe --project ".\examples\terrain-clip-demo"
+.\build\ucrt64-debug\SimpleEnginePlayer.exe --project ".\examples\terrain-clip-demo"
 ```
 
 In the editor, explore the four scene entities:

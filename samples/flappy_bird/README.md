@@ -5,13 +5,13 @@ This sample is a separate game executable linked against `engine_core`. It uses 
 Build:
 
 ```powershell
-cmake --build build --target flappy_bird_sample
+cmake --build --preset ucrt64-debug --target flappy_bird_sample
 ```
 
 Run runtime-only:
 
 ```powershell
-.\build\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
+.\build\ucrt64-debug\flappy_bird_sample.exe --config .\samples\flappy_bird\flappy_bird.game.json
 ```
 
 Controls:

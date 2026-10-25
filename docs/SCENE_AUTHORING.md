@@ -86,9 +86,9 @@ This is not a replacement for an explicit crash-recovery/backups system.
 ## Tests and developer checks
 
 ```sh
-cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
-cmake --build build --parallel 2
-ctest --test-dir build --output-on-failure
+cmake --preset ucrt64-debug
+cmake --build --preset ucrt64-debug
+ctest --preset ucrt64-debug
 ```
 
 `scene_authoring_tests` covers unique/stable identities, copying and
