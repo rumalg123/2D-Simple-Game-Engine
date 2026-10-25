@@ -243,6 +243,33 @@ ImportBuildReport AssetImportPipeline::build(
         visit(asset);
         if(!result.errors.empty()) break;
     }
+    if(result.ok()) {
+        // Atomic machine-readable mapping for the exporter. The chosen
+        // artifact is determined by the importer's dependency/settings key,
+        // never by a newest-file search through stale cache entries.
+        const auto staging=cache/"artifact-map.tsv.tmp";
+        std::ofstream map(staging,std::ios::binary|std::ios::trunc);
+        if(!map) result.errors.push_back("Cannot write import artifact map.");
+        else {
+            map<<"SEIMPORT1\n";
+            for(const auto& artifact:result.artifacts)
+                map<<artifact.id<<'\t'<<artifact.guid<<'\t'
+                   <<artifact.cacheKey<<'\t'
+                   <<artifact.file.filename().string()<<'\n';
+            map.flush();map.close();
+            if(!map) result.errors.push_back("Cannot finish import artifact map.");
+            else {
+                std::filesystem::rename(staging,cache/"artifact-map.tsv",ec);
+                if(ec) {
+                    // Windows rename does not overwrite existing files.
+                    std::filesystem::remove(cache/"artifact-map.tsv",ec);
+                    ec.clear();
+                    std::filesystem::rename(staging,cache/"artifact-map.tsv",ec);
+                    if(ec) result.errors.push_back("Cannot commit import map: "+ec.message());
+                }
+            }
+        }
+    }
     return result;
 }
 bool AssetImportPipeline::clean(const std::filesystem::path& projectRoot,
