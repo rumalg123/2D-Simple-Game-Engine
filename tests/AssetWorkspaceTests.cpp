@@ -45,7 +45,8 @@ try {
         "entities":[{
             "id":1,"name":{"name":"Hero"},"transform":{"x":0,"y":0},
             "sprite":{"halfWidth":0.2,"halfHeight":0.2,
-              "textureName":"texture:sprites/hero","texturePath":"old/wrong/hero.ppm"}
+              "textureName":"texture:sprites/hero","texturePath":"old/wrong/hero.ppm"},
+            "script":{"scriptName":"Player","active":true}
         }]
     })JSON");
     std::string error;
@@ -65,6 +66,11 @@ try {
     check(initial.index().findByPath("Scripts/Player.lua")->type==AssetType::Script,
           "Lua scripts were not indexed");
     check(initial.audit().valid(),"Imported workspace audit failed");
+    const auto* sceneSource=initial.index().findByPath("Scenes/Main.scene.json");
+    check(sceneSource && sceneSource->dependencies.size()==2 &&
+          sceneSource->dependencies[0]=="script:scripts/player" &&
+          sceneSource->dependencies[1]=="texture:sprites/hero",
+          "Scene dependencies were not inferred for scripts and textures");
 
     check(!initial.move(id,"../escape.ppm",error),"Traversal path was allowed");
     check(!initial.move(id,"Sprites/missing/sub/hero.ppm",error),
@@ -103,11 +109,46 @@ try {
           "Scene texture did not follow stable asset ID after relocation");
 
     write(assets/"Sprites/hero-renamed.ppm","P3\n1 1\n255\n0 255 0\n");
+    check(reopened.audit().changed>0,"Modified source file was not detected before sync");
     check(reopened.sync(added,error),"Could not rescan modified asset: "+error);
     check(added==0,"A content change created a new asset ID");
     const auto* changed=reopened.index().findById(id);
     check(changed && changed->guid==originalGuid && changed->contentHash!=hash,
           "Source content fingerprint was not updated independently of GUID");
+    check(reopened.audit().changed==0,"Rescanning did not clear source changed marker");
+
+    // Opening a pre-GUID catalog must upgrade and persist identity, without
+    // altering its original legacy ID.
+    const auto legacyRoot=temp.root/"LegacyAssets";
+    std::filesystem::create_directories(legacyRoot/"Sprites");
+    write(legacyRoot/"Sprites/old.ppm","P3\n1 1\n255\n0 0 255\n");
+    write(legacyRoot/"asset_manifest.json",
+          R"JSON({"version":1,"assets":[{"id":"texture:sprites/old",
+          "type":"texture","name":"old","path":"Sprites/old.ppm"}]})JSON");
+    AssetManifest legacy;
+    check(legacy.loadFromFile((legacyRoot/"asset_manifest.json").string(),error) &&
+          legacy.needsUpgrade(),"Old manifest was not marked for GUID migration");
+    const std::string migratedGuid=legacy.findById("texture:sprites/old")->guid;
+    AssetWorkspace legacyWorkspace(legacyRoot);
+    check(legacyWorkspace.open(error) && legacyWorkspace.sync(added,error),
+          "Old manifest GUID migration failed");
+    AssetManifest persistedLegacy;
+    check(persistedLegacy.loadFromFile((legacyRoot/"asset_manifest.json").string(),error) &&
+          !persistedLegacy.needsUpgrade() &&
+          persistedLegacy.findById("texture:sprites/old")->guid==migratedGuid,
+          "Migration did not persist GUID");
+
+    const auto duplicatePath=temp.root/"duplicate.json";
+    write(duplicatePath,R"JSON({"version":1,"assets":[
+      {"id":"texture:first","guid":"00000000000000000000000000000000",
+       "path":"Sprites/a.ppm","type":"texture"},
+      {"id":"texture:second","guid":"00000000000000000000000000000000",
+       "path":"Sprites/b.ppm","type":"texture"}
+    ]})JSON");
+    AssetManifest duplicate;
+    check(!duplicate.loadFromFile(duplicatePath.string(),error),
+          "Duplicate catalog GUIDs were accepted");
+
 
     // Missing and duplicate GUID metadata must fail clearly.
     std::filesystem::remove(assets/"Sprites/hero-renamed.ppm");
