@@ -117,17 +117,31 @@ try {
     require(!AssetImportPipeline::build(root,"../escape").ok(),
             "Unsafe platform token accepted");
 
+    require(AssetImportPipeline::clean(root,"windows-x64",error),
+            "Cannot clean Windows cache: "+error);
+    require(!std::filesystem::exists(
+        AssetImportPipeline::cacheRoot(root,"windows-x64")),
+        "Cache clean did not delete selected platform artifacts");
+    require(std::filesystem::exists(
+        AssetImportPipeline::cacheRoot(root,"linux-x64")),
+        "Cleaning Windows cache removed Linux artifacts");
+    const auto rebuilt=AssetImportPipeline::build(root);
+    require(rebuilt.ok() && rebuilt.built==2,
+            "Clean build did not recreate output artifacts");
+
+    const auto* compiledAfterClean=find(rebuilt,"texture:sprites/player");
+    require(compiledAfterClean,"Rebuilt texture missing after cache cleanup");
     // Portable exports keep textureName for catalog identity, but the player
     // must honor an explicit compiled texturePath under Assets/Imported.
     std::filesystem::create_directories(root/"Assets/Imported");
-    const auto imported=root/"Assets/Imported"/(compiled->guid+".seimg");
-    std::filesystem::copy_file(compiled->file,imported,
+    const auto imported=root/"Assets/Imported"/(compiledAfterClean->guid+".seimg");
+    std::filesystem::copy_file(compiledAfterClean->file,imported,
          std::filesystem::copy_options::overwrite_existing);
     const auto compiledScene=root/"Assets/Scenes/Compiled.scene.json";
     write(compiledScene,
         "{\"entities\":[{\"id\":1,\"name\":{\"name\":\"Compiled Hero\"},"
         "\"sprite\":{\"textureName\":\"texture:sprites/player\","
-        "\"texturePath\":\"Assets/Imported/"+compiled->guid+".seimg\"}}]}");
+        "\"texturePath\":\"Assets/Imported/"+compiledAfterClean->guid+".seimg\"}}]}");
     {
         const auto oldWorkingDir=std::filesystem::current_path();
         struct RestoreDirectory {
@@ -151,17 +165,7 @@ try {
                 "Catalog lookup incorrectly overrode explicit compiled texture");
     }
 
-    require(AssetImportPipeline::clean(root,"windows-x64",error),
-            "Cannot clean Windows cache: "+error);
-    require(!std::filesystem::exists(
-        AssetImportPipeline::cacheRoot(root,"windows-x64")),
-        "Cache clean did not delete selected platform artifacts");
-    require(std::filesystem::exists(
-        AssetImportPipeline::cacheRoot(root,"linux-x64")),
-        "Cleaning Windows cache removed Linux artifacts");
-    const auto rebuilt=AssetImportPipeline::build(root);
-    require(rebuilt.ok() && rebuilt.built==2,
-            "Clean build did not recreate output artifacts");
+
 
     // Do not accept truncated or oversized images as valid resource files.
     const auto corrupt=root/"corrupt.seimg";
