@@ -172,7 +172,9 @@ try {
         ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $staging }
     $destinationAssets=Join-Path $staging $assetRelative
     New-Item -ItemType Directory -Path $destinationAssets -Force | Out-Null
-    Copy-Item -LiteralPath (Join-Path $assetRoot "*") -Destination $destinationAssets -Recurse -Force
+    Get-ChildItem -LiteralPath $assetRoot -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $destinationAssets -Recurse -Force
+    }
     foreach ($rel in $rewrites.Keys) {
         $target=Join-Path $destinationAssets $rel
         [IO.File]::WriteAllText($target,[string]$rewrites[$rel],
@@ -185,8 +187,10 @@ try {
     if ($project.PSObject.Properties.Name -contains "hotReload") {
         $project.hotReload=$false
     } else { $project | Add-Member -MemberType NoteProperty -Name hotReload -Value $false }
-    $project | ConvertTo-Json -Depth 100 |
-        Set-Content -LiteralPath (Join-Path $staging "project.simple.json") -Encoding UTF8
+    [IO.File]::WriteAllText(
+        (Join-Path $staging "project.simple.json"),
+        ($project | ConvertTo-Json -Depth 100),
+        (New-Object Text.UTF8Encoding($false)))
 
     $bat="@echo off" + [Environment]::NewLine +
          'pushd "%~dp0"' + [Environment]::NewLine +
@@ -220,11 +224,11 @@ try {
         assets=$assetRelative.Replace('\','/')
         files=$inventory
     } | ConvertTo-Json -Depth 8 |
-        Set-Content -LiteralPath (Join-Path $staging "export-manifest.json") -Encoding UTF8
+        Set-Content -LiteralPath (Join-Path $staging "export-manifest.json") -Encoding ASCII
 
     Move-Item -LiteralPath $staging -Destination $package
     if (!$NoZip) {
-        Compress-Archive -LiteralPath (Join-Path $package "*") -DestinationPath $zip -Force
+        Compress-Archive -Path (Join-Path $package "*") -DestinationPath $zip -Force
     }
     Write-Host "Game exported successfully: $package"
     if (!$NoZip) { Write-Host "Standalone ZIP: $zip" }
