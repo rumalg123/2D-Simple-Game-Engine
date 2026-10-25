@@ -37,16 +37,22 @@ function RequireOrdinaryFile([string]$path) {
     }
     return $item
 }
-function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot) {
+function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot,[hashtable]$catalog) {
     if ($null -eq $node) { return $false }
     $changed=$false
     if ($node -is [array]) {
-        foreach($v in $node) { if (FixTextureReferences $v $root $assetRoot) { $changed=$true } }
+        foreach($v in $node) { if (FixTextureReferences $v $root $assetRoot $catalog) { $changed=$true } }
     } elseif ($node -is [pscustomobject]) {
         foreach($property in $node.PSObject.Properties) {
             if ($property.Name -eq "texturePath" -and $property.Value -is [string] -and
                 ![string]::IsNullOrWhiteSpace($property.Value)) {
                 $original=[string]$property.Value
+                $nameProperty=$node.PSObject.Properties['textureName']
+                if($nameProperty -and $catalog.ContainsKey([string]$nameProperty.Value)) {
+                    # A managed move can leave old authoring texturePath strings,
+                    # but the stable textureName asset ID points to the new file.
+                    $original=[string]$catalog[[string]$nameProperty.Value]
+                }
                 if ([IO.Path]::IsPathRooted($original)) {
                     $full=[IO.Path]::GetFullPath($original)
                 } else {
@@ -61,7 +67,7 @@ function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot) {
                     $changed=$true
                 }
             } else {
-                if (FixTextureReferences $property.Value $root $assetRoot) { $changed=$true }
+                if (FixTextureReferences $property.Value $root $assetRoot $catalog) { $changed=$true }
             }
         }
     }
@@ -145,11 +151,24 @@ foreach ($item in $assets) {
     }
 }
 # Preflight texture references; avoid mutating the original project.
+# Catalog IDs remain valid when the source asset has been moved/renamed.
+# Resolve them to *current* relative paths before the old texturePath preflight.
+$catalog=@{}
+$catalogFile=Join-Path $assetRoot "asset_manifest.json"
+if (Test-Path -LiteralPath $catalogFile -PathType Leaf) {
+    $assetCatalog=Get-Content -Raw -LiteralPath $catalogFile | ConvertFrom-Json
+    foreach($item in @($assetCatalog.assets)) {
+        if ($item.id -and $item.path) {
+            $catalog[[string]$item.id] = ($assetRelative.TrimEnd('/','\') + '/' +
+                                           ([string]$item.path).Replace('\','/'))
+        }
+    }
+}
 $assetJson=$assets | Where-Object { !$_.PSIsContainer -and $_.Extension -eq ".json" }
 $rewrites=@{}
 foreach($file in $assetJson) {
     $parsed=Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
-    if (FixTextureReferences $parsed $projectRoot $assetRoot) {
+    if (FixTextureReferences $parsed $projectRoot $assetRoot $catalog) {
         $rel=$file.FullName.Substring($assetRoot.Length).TrimStart('\','/')
         $rewrites[$rel]=($parsed | ConvertTo-Json -Depth 100)
     }
