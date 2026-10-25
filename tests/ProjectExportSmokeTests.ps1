@@ -97,7 +97,7 @@ $compiledOutput=Join-Path $OutputDir "compiled-exports"
 $compiledGame=Join-Path $compiledOutput "SmokeGame"
 $compiledScene=Get-Content -Raw -LiteralPath (Join-Path $compiledGame "Assets/Scenes/Main.scene.json") | ConvertFrom-Json
 $texturePath=[string]$compiledScene.entities[0].sprite.texturePath
-if($texturePath -notmatch '^Assets/Imported/[a-fA-F0-9]{32}`.seimg
+if($texturePath -notmatch '^Assets/Imported/[a-fA-F0-9]{32}[.]seimg
 $existingZipHash=(Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash
 $badLua=Join-Path $project "Assets/Scripts/Invalid.lua"
 Set-Content -LiteralPath $badLua -Value "function broken( this is invalid" -Encoding ASCII
