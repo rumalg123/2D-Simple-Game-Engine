@@ -109,6 +109,27 @@ Status values:
   autotile stamp brushes, animation transition graphs and game export.
 - Details: [Terrain, Clips & Layers](docs/TERRAIN_CLIPS_LAYERS.md).
 
+## Portable Windows Game Export (This PR)
+
+- **Implemented:** CLI `tools/export-project.ps1` and visual editor Build Game
+  panel for exporting self-contained Windows x64 game ZIPs from project data.
+- **Implemented:** Standalone player auto-discovers adjacent manifests,
+  resolves project-relative texture paths, and supports headless
+  `--verify-bundle` checks without a graphics window.
+- **Implemented:** Shared project validation across CLI and player: checks
+  all scene JSON files, Lua syntax, and referenced gameplay scripts.
+- **Implemented:** Restricted asset inclusion and external-path/symlink checks,
+  portable scene texture-path rebasing, SHA-256 inventory, staged output and
+  overwrite protection.
+- **Implemented:** Editor Release download bundles exporter, player and
+  validator; main release also publishes a playable exported example.
+- **Implemented:** CI smoke test exports, validates and hashes a real game,
+  then rejects intentionally bad Lua and hidden secrets files.
+- **Next:** Cross-platform player/audio, export templates and build profiles,
+  persistent asset GUIDs/dependency database, symbols/signing and resource
+  compression.
+- Guide: [Game Export Workflow](docs/GAME_EXPORT_WORKFLOW.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.
