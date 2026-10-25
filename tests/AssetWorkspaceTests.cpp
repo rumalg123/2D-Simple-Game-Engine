@@ -128,9 +128,11 @@ try {
     AssetManifest legacy;
     check(legacy.loadFromFile((legacyRoot/"asset_manifest.json").string(),error) &&
           legacy.needsUpgrade(),"Old manifest was not marked for GUID migration");
-    const std::string migratedGuid=legacy.findById("texture:sprites/old")->guid;
     AssetWorkspace legacyWorkspace(legacyRoot);
-    check(legacyWorkspace.open(error) && legacyWorkspace.sync(added,error),
+    check(legacyWorkspace.open(error),"Old manifest open failed");
+    const std::string migratedGuid=
+        legacyWorkspace.index().findById("texture:sprites/old")->guid;
+    check(legacyWorkspace.sync(added,error),
           "Old manifest GUID migration failed");
     AssetManifest persistedLegacy;
     check(persistedLegacy.loadFromFile((legacyRoot/"asset_manifest.json").string(),error) &&
