@@ -126,7 +126,7 @@ jobs:
 
           # Distribute a complete playable project produced by the same
           # exporter available in the editor's Build Game panel.
-          & ./tools/export-project.ps1 -ProjectPath 'examples/terrain-clip-demo' -BuildDir 'build' -OutputDir 'dist' -PackageName 'TerrainClipsGame' -SkipBuild
+          & ./tools/export-project.ps1 -ProjectPath 'examples/terrain-clip-demo' -BuildDir 'build' -OutputDir 'dist' -PackageName 'TerrainClipsGame' -SkipBuild -UseImportedTextures
           if (-not (Test-Path 'dist/TerrainClipsGame.zip')) {
             throw 'Missing exported terrain demo.'
           }
