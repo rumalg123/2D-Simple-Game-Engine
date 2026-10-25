@@ -8,7 +8,8 @@ param(
     [string]$OutputDir = "dist/project-exports",
     [string]$PackageName = "",
     [switch]$SkipBuild,
-    [switch]$NoZip
+    [switch]$NoZip,
+    [switch]$UseImportedTextures
 )
 $ErrorActionPreference = "Stop"
 $repo = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
@@ -37,17 +38,26 @@ function RequireOrdinaryFile([string]$path) {
     }
     return $item
 }
-function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot,[hashtable]$catalog) {
+function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot,[hashtable]$catalog,[hashtable]$compiled) {
     if ($null -eq $node) { return $false }
     $changed=$false
     if ($node -is [array]) {
-        foreach($v in $node) { if (FixTextureReferences $v $root $assetRoot $catalog) { $changed=$true } }
+        foreach($v in $node) { if (FixTextureReferences $v $root $assetRoot $catalog $compiled) { $changed=$true } }
     } elseif ($node -is [pscustomobject]) {
         foreach($property in $node.PSObject.Properties) {
             if ($property.Name -eq "texturePath" -and $property.Value -is [string] -and
                 ![string]::IsNullOrWhiteSpace($property.Value)) {
-                $original=[string]$property.Value
                 $nameProperty=$node.PSObject.Properties['textureName']
+                $referenceName=if($nameProperty){[string]$nameProperty.Value}else{''}
+                if($compiled.ContainsKey($referenceName)) {
+                    $destination=[string]$compiled[$referenceName]
+                    if([string]$property.Value -cne $destination) {
+                        $property.Value=$destination
+                        $changed=$true
+                    }
+                    continue
+                }
+                $original=[string]$property.Value
                 if($nameProperty -and $catalog.ContainsKey([string]$nameProperty.Value)) {
                     # A managed move can leave old authoring texturePath strings,
                     # but the stable textureName asset ID points to the new file.
@@ -67,7 +77,7 @@ function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot,[ha
                     $changed=$true
                 }
             } else {
-                if (FixTextureReferences $property.Value $root $assetRoot $catalog) { $changed=$true }
+                if (FixTextureReferences $property.Value $root $assetRoot $catalog $compiled) { $changed=$true }
             }
         }
     }
@@ -117,6 +127,10 @@ foreach ($binary in @($projectCli,$playerExe)) {
 }
 & $projectCli validate $projectRoot
 if ($LASTEXITCODE -ne 0) { throw "Project validation failed; game export stopped." }
+if ($UseImportedTextures) {
+    & $projectCli assets-build $projectRoot windows-x64
+    if ($LASTEXITCODE -ne 0) {throw "Compiled asset import failed; export stopped."}
+}
 
 if (![string]::IsNullOrWhiteSpace($PackageName)) {
     $name=$PackageName
@@ -164,6 +178,147 @@ if (Test-Path -LiteralPath $catalogFile -PathType Leaf) {
         }
     }
 }
+$compiled=@{}
+$compiledFiles=@{}
+if($UseImportedTextures) {
+    if(!(Test-Path -LiteralPath $catalogFile -PathType Leaf)) {
+        throw "Compiled texture export requires an asset catalog."
+    }
+    $cacheDir=Join-Path $projectRoot ".simpleengine/cache/windows-x64"
+    $mapFile=Join-Path $cacheDir "artifact-map.tsv"
+    if(!(Test-Path -LiteralPath $mapFile -PathType Leaf)) {
+        throw "Missing compiled artifact map; run assets-build."
+    }
+    $lines=@(Get-Content -LiteralPath $mapFile)
+    if($lines.Count -lt 1 -or $lines[0] -ne "SEIMPORT1") {
+        throw "Invalid compiled artifact map format."
+    }
+    $artifactIndex=@{}
+    foreach($line in $lines | Select-Object -Skip 1) {
+        $fields=@($line.Split("`t"))
+        if($fields.Count -ne 4) {throw "Invalid imported artifact map row."}
+        if($fields[3] -notmatch '^[0-9a-f]{32}-[0-9a-f]{16}`.se(img|blob)
+$rewrites=@{}
+foreach($file in $assetJson) {
+    $parsed=Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
+    if (FixTextureReferences $parsed $projectRoot $assetRoot $catalog $compiled) {
+        $rel=$file.FullName.Substring($assetRoot.Length).TrimStart('\','/')
+        $rewrites[$rel]=($parsed | ConvertTo-Json -Depth 100)
+    }
+}
+
+New-Item -ItemType Directory -Path $output -Force | Out-Null
+if (Test-Path -LiteralPath $package) {
+    throw "Export destination exists. Move/delete it first: $package"
+}
+$staging=Join-Path $output (".staging-" + [guid]::NewGuid().ToString("N"))
+$zip=Join-Path $output ($name+".zip")
+if ((Test-Path -LiteralPath $zip) -and !$NoZip) {
+    throw "Export ZIP exists. Move/delete it first: $zip"
+}
+try {
+    New-Item -ItemType Directory -Path $staging -Force | Out-Null
+    $exeName=$name+".exe"
+    Copy-Item -LiteralPath $playerExe -Destination (Join-Path $staging $exeName)
+    Get-ChildItem -LiteralPath $build -Filter "*.dll" -File |
+        ForEach-Object { Copy-Item -LiteralPath $_.FullName -Destination $staging }
+    $destinationAssets=Join-Path $staging $assetRelative
+    New-Item -ItemType Directory -Path $destinationAssets -Force | Out-Null
+    Get-ChildItem -LiteralPath $assetRoot -Force | ForEach-Object {
+        Copy-Item -LiteralPath $_.FullName -Destination $destinationAssets -Recurse -Force
+    }
+    if($UseImportedTextures) {
+        foreach($portable in $compiledFiles.Keys) {
+            $destination=Join-Path $staging $portable
+            New-Item -ItemType Directory -Path (Split-Path -Parent $destination) -Force | Out-Null
+            Copy-Item -LiteralPath $compiledFiles[$portable] -Destination $destination -Force
+        }
+    }
+    foreach ($rel in $rewrites.Keys) {
+        $target=Join-Path $destinationAssets $rel
+        [IO.File]::WriteAllText($target,[string]$rewrites[$rel],
+                                (New-Object System.Text.UTF8Encoding($false)))
+    }
+
+    # Players don't need the editor, project source or user-specific paths.
+    $project.editorEnabled=$false
+    $project.startPlaying=$true
+    if ($project.PSObject.Properties.Name -contains "hotReload") {
+        $project.hotReload=$false
+    } else { $project | Add-Member -MemberType NoteProperty -Name hotReload -Value $false }
+    [IO.File]::WriteAllText(
+        (Join-Path $staging "project.simple.json"),
+        ($project | ConvertTo-Json -Depth 100),
+        (New-Object Text.UTF8Encoding($false)))
+
+    $bat="@echo off" + [Environment]::NewLine +
+         'pushd "%~dp0"' + [Environment]::NewLine +
+         '"' + $exeName + '"' + [Environment]::NewLine +
+         'popd' + [Environment]::NewLine
+    [IO.File]::WriteAllText((Join-Path $staging "Play.bat"),$bat,
+                            [Text.Encoding]::ASCII)
+    [IO.File]::WriteAllText((Join-Path $staging "PLAY.txt"),
+        "Double-click $exeName or Play.bat to play. Game assets and Lua scripts must remain next to the executable.",
+        [Text.Encoding]::UTF8)
+    $luaLicense=Join-Path $repo "third_party_licenses/Lua.txt"
+    if (Test-Path -LiteralPath $luaLicense) {
+        New-Item -ItemType Directory -Path (Join-Path $staging "licenses") -Force | Out-Null
+        Copy-Item -LiteralPath $luaLicense -Destination (Join-Path $staging "licenses/Lua.txt")
+    }
+    $files=Get-ChildItem -LiteralPath $staging -File -Recurse |
+        Sort-Object { $_.FullName.Substring($staging.Length).Replace('\','/') }
+    $inventory=@($files | ForEach-Object {
+        [ordered]@{
+            path=$_.FullName.Substring($staging.Length).TrimStart('\','/').Replace('\','/')
+            size=$_.Length
+            sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()
+        }
+    })
+    [ordered]@{
+        formatVersion=1
+        platform="windows-x64"
+        game=$name
+        executable=$exeName
+        entrypoint="project.simple.json"
+        assets=$assetRelative.Replace('\','/')
+        files=$inventory
+    } | ConvertTo-Json -Depth 8 |
+        Set-Content -LiteralPath (Join-Path $staging "export-manifest.json") -Encoding ASCII
+
+    Move-Item -LiteralPath $staging -Destination $package
+    if (!$NoZip) {
+        Compress-Archive -Path (Join-Path $package "*") -DestinationPath $zip -Force
+    }
+    Write-Host "Game exported successfully: $package"
+    if (!$NoZip) { Write-Host "Standalone ZIP: $zip" }
+} finally {
+    if (Test-Path -LiteralPath $staging) {
+        Remove-Item -LiteralPath $staging -Recurse -Force
+    }
+}
+) {
+            throw "Invalid compiled cache filename."
+        }
+        $artifactIndex[$fields[0]]=@{guid=$fields[1];file=$fields[3]}
+    }
+    foreach($asset in @($assetCatalog.assets)) {
+        if($asset.type -eq "texture") {
+            $ref=[string]$asset.id
+            if(!$artifactIndex.ContainsKey($ref) -or
+               $artifactIndex[$ref].guid -ne [string]$asset.guid) {
+                throw "Missing or mismatched cached texture: $ref"
+            }
+            $file=Join-Path $cacheDir $artifactIndex[$ref].file
+            if(!(Test-Path -LiteralPath $file -PathType Leaf)) {
+                throw "Compiled texture artifact is missing: $ref"
+            }
+            $portable="Assets/Imported/$($asset.guid).seimg"
+            $compiled[$ref]=$portable
+            $compiledFiles[$portable]=$file
+        }
+    }
+}
+
 $assetJson=$assets | Where-Object { !$_.PSIsContainer -and $_.Extension -eq ".json" }
 $rewrites=@{}
 foreach($file in $assetJson) {
