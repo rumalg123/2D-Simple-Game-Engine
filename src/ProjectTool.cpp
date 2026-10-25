@@ -1,5 +1,6 @@
 #include "ProjectManager.h"
 #include "AssetWorkspace.h"
+#include "AssetImportPipeline.h"
 #include "ProjectValidation.h"
 #include "LuaScriptRuntime.h"
 #include "ResourceManager.h"
@@ -13,7 +14,7 @@
 #include <vector>
 
 int main(int argc, char** argv) {
-    if (argc < 3 || argc > 5) {
+    if (argc < 3 || argc > 7) {
         std::cerr << "Usage:\n"
                   << "  simpleengine_project create <parent-directory> <project-name>\n"
                   << "  simpleengine_project info <project-directory>\n"
@@ -22,7 +23,10 @@ int main(int argc, char** argv) {
                   << "  simpleengine_project assets-audit <project-directory>\n"
                   << "  simpleengine_project assets-list <project-directory>\n"
                   << "  simpleengine_project assets-deps <project-directory> <asset-id>\n"
-                  << "  simpleengine_project assets-move <project-directory> <asset-id> <new-asset-path>\n";
+                  << "  simpleengine_project assets-move <project-directory> <asset-id> <new-asset-path>\n"
+                  << "  simpleengine_project assets-build <project-directory> [target-platform]\n"
+                  << "  simpleengine_project assets-clean <project-directory> [target-platform]\n"
+                  << "  simpleengine_project assets-import-settings <project-directory> <asset-id> <max-size> <flipY:0|1> <premultiply:0|1>\n";
         return 2;
     }
 
@@ -36,6 +40,11 @@ int main(int argc, char** argv) {
                 operation == "assets-sync" || operation == "assets-audit" ||
                 operation == "assets-list") && argc == 3) {
         success = ProjectManager::open(argv[2], project, error);
+    } else if ((operation=="assets-build" || operation=="assets-clean") &&
+               (argc==3 || argc==4)) {
+        success=ProjectManager::open(argv[2],project,error);
+    } else if (operation=="assets-import-settings" && argc==7) {
+        success=ProjectManager::open(argv[2],project,error);
     } else if (operation == "assets-deps" && argc == 4) {
         success = ProjectManager::open(argv[2], project, error);
     } else if (operation == "assets-move" && argc == 5) {
@@ -50,11 +59,54 @@ int main(int argc, char** argv) {
         return 1;
     }
 
+    if(operation=="assets-build") {
+        const std::string platform=argc==4 ? argv[3] : "windows-x64";
+        const auto report=AssetImportPipeline::build(project.root,platform);
+        for(const auto& issue:report.errors)
+            std::cerr<<"Import: "<<issue<<'\n';
+        if(!report.ok()) return 1;
+        std::cout<<"Asset import: "<<report.built<<" rebuilt, "
+                 <<report.cached<<" cached, "<<report.artifacts.size()
+                 <<" total; "<<report.outputBytes<<" artifact bytes.\n";
+        return 0;
+    }
+    if(operation=="assets-clean") {
+        const std::string platform=argc==4 ? argv[3] : "windows-x64";
+        if(!AssetImportPipeline::clean(project.root,platform,error)) {
+            std::cerr<<"Cache clean: "<<error<<'\n';
+            return 1;
+        }
+        std::cout<<"Cleaned import cache for "<<platform<<"\n";
+        return 0;
+    }
     if (operation.rfind("assets-", 0) == 0) {
         AssetWorkspace assets(project.config.assetRoot);
         if(!assets.open(error)) {
             std::cerr << "Asset database error: " << error << '\n';
             return 1;
+        }
+        if(operation=="assets-import-settings") {
+            TextureImportSettings settings;
+            try {
+                settings.maxDimension=std::stoi(argv[4]);
+            } catch(const std::exception&) {
+                std::cerr<<"Invalid max texture dimension.\n";
+                return 2;
+            }
+            const std::string flip=argv[5],alpha=argv[6];
+            if((flip!="0" && flip!="1") ||
+               (alpha!="0" && alpha!="1")) {
+                std::cerr<<"flipY and premultiply must be 0 or 1.\n";
+                return 2;
+            }
+            settings.flipY=flip=="1";
+            settings.premultiplyAlpha=alpha=="1";
+            if(!assets.setTextureSettings(argv[3],settings,error)) {
+                std::cerr<<"Texture settings: "<<error<<'\n';
+                return 1;
+            }
+            std::cout<<"Saved import settings for "<<argv[3]<<".\n";
+            return 0;
         }
         if(operation=="assets-sync") {
             std::size_t imported=0;
