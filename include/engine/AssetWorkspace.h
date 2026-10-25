@@ -25,6 +25,9 @@ public:
     AssetAudit audit() const;
     bool move(const std::string& id, const std::string& relativeDestination,
               std::string& error);
+    bool setTextureSettings(const std::string& id,
+                            const TextureImportSettings& settings,
+                            std::string& error);
     const AssetManifest& index() const { return catalog_; }
 private:
     std::filesystem::path root_;
