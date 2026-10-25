@@ -96,6 +96,7 @@ void Engine::renderUi() {
     renderAssetBrowserPanel();
     renderTilemapEditorPanel();
     renderAnimationTimelinePanel();
+    renderProjectExportPanel();
     PluginContext pluginContext = makePluginContext();
     pluginManager.renderUi(pluginContext);
 }
