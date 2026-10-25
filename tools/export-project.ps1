@@ -195,9 +195,31 @@ if($UseImportedTextures) {
     }
     $artifactIndex=@{}
     foreach($line in $lines | Select-Object -Skip 1) {
-        $fields=@($line.Split("`t"))
+        $fields=@($line.Split([char]9))
         if($fields.Count -ne 4) {throw "Invalid imported artifact map row."}
-        if($fields[3] -notmatch '^[0-9a-f]{32}-[0-9a-f]{16}`.se(img|blob)
+        if($fields[3] -notmatch '^[0-9a-f]{32}-[0-9a-f]{16}[.]se(img|blob)$') {
+            throw "Invalid compiled cache filename."
+        }
+        $artifactIndex[$fields[0]]=@{guid=$fields[1];file=$fields[3]}
+    }
+    foreach($asset in @($assetCatalog.assets)) {
+        if($asset.type -eq "texture") {
+            $ref=[string]$asset.id
+            if(!$artifactIndex.ContainsKey($ref) -or
+               $artifactIndex[$ref].guid -ne [string]$asset.guid) {
+                throw "Missing or mismatched cached texture: $ref"
+            }
+            $file=Join-Path $cacheDir $artifactIndex[$ref].file
+            if(!(Test-Path -LiteralPath $file -PathType Leaf)) {
+                throw "Compiled texture artifact is missing: $ref"
+            }
+            $portable="Assets/Imported/$($asset.guid).seimg"
+            $compiled[$ref]=$portable
+            $compiledFiles[$portable]=$file
+        }
+    }
+}
+$assetJson=$assets | Where-Object { !$_.PSIsContainer -and $_.Extension -eq ".json" }
 $rewrites=@{}
 foreach($file in $assetJson) {
     $parsed=Get-Content -Raw -LiteralPath $file.FullName | ConvertFrom-Json
