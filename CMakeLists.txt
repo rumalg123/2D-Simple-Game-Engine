@@ -241,6 +241,18 @@ add_test(NAME terrain_demo_project_validate
     COMMAND simpleengine_project validate
         "${CMAKE_SOURCE_DIR}/examples/terrain-clip-demo")
 
+# Distribution smoke: create -> validate -> export -> inspect hashes ->
+# run the renamed standalone player in no-window verification mode, and test
+# rejection of invalid Lua and hidden/secrets files.
+add_test(
+    NAME project_export_windows_smoke
+    COMMAND powershell -NoProfile -ExecutionPolicy Bypass
+        -File ${CMAKE_SOURCE_DIR}/tests/ProjectExportSmokeTests.ps1
+        -RepoRoot ${CMAKE_SOURCE_DIR}
+        -BuildDir ${CMAKE_BINARY_DIR}
+        -OutputDir ${CMAKE_BINARY_DIR}/export_ci_test
+)
+
 add_executable(snake_sample
     samples/snake/src/SnakeGame.cpp
 )
