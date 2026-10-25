@@ -82,9 +82,10 @@ int main(int argc, char** argv) {
         configDirectory = project.root;
         // Relative texture and other imported asset paths resolve from the
         // packaged project, never an unrelated Explorer/terminal directory.
-        std::filesystem::current_path(project.root, ec);
-        if (ec) {
-            std::cerr << "Cannot enter game project directory: " << ec.message() << '\\n';
+        std::error_code chdirError;
+        std::filesystem::current_path(project.root, chdirError);
+        if (chdirError) {
+            std::cerr << "Cannot enter game project directory: " << chdirError.message() << '\\n';
             return 1;
         }
     }
