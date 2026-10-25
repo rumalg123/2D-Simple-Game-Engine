@@ -65,8 +65,12 @@ $existingZipHash=(Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash
 $badLua=Join-Path $project "Assets/Scripts/Invalid.lua"
 Set-Content -LiteralPath $badLua -Value "function broken( this is invalid" -Encoding ASCII
 $badOutput=Join-Path $OutputDir "invalid-output"
+# Native stderr is expected here: the child exporter must fail.
+$ErrorActionPreference="Continue"
 & powershell -NoProfile -ExecutionPolicy Bypass -File $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $badOutput -SkipBuild 2>&1 | Out-Null
-if($LASTEXITCODE -eq 0) { throw "Invalid Lua project was exported." }
+$negativeExit=$LASTEXITCODE
+$ErrorActionPreference="Stop"
+if($negativeExit -eq 0) { throw "Invalid Lua project was exported." }
 if(Test-Path -LiteralPath (Join-Path $badOutput "SmokeGame")) {
     throw "Invalid game exported partial files."
 }
@@ -76,6 +80,10 @@ if((Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash -ne $existingZipHa
 Remove-Item -LiteralPath $badLua -Force
 # Refuse arbitrary project files, including files commonly used for secrets.
 Set-Content -LiteralPath (Join-Path $project "Assets/.env") -Value "SECRET=do-not-publish" -Encoding ASCII
+# Native stderr is expected here: the child exporter must fail.
+$ErrorActionPreference="Continue"
 & powershell -NoProfile -ExecutionPolicy Bypass -File $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $badOutput -SkipBuild 2>&1 | Out-Null
-if($LASTEXITCODE -eq 0) { throw "Exporter included a hidden secrets file." }
+$negativeExit=$LASTEXITCODE
+$ErrorActionPreference="Stop"
+if($negativeExit -eq 0) { throw "Exporter included a hidden secrets file." }
 Write-Host "Portable export passed: standalone EXE, ZIP, Lua, asset hash inventory and failure isolation."
