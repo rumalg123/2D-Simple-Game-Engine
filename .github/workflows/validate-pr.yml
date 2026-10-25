@@ -40,7 +40,7 @@ jobs:
           set -euo pipefail
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release
           cmake --build build --parallel 2
-          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests tilemap_animation_tests terrain_clip_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
+          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests tilemap_animation_tests terrain_clip_tests asset_workspace_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
             test -f "build/${target}.exe" || { echo "Missing target: ${target}.exe"; exit 1; }
           done
 
@@ -61,7 +61,7 @@ jobs:
               copy_runtime_deps "${dependency}"
             done < <(objdump -p "${binary}" | awk '/DLL Name:/ { print $3 }')
           }
-          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests tilemap_animation_tests terrain_clip_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
+          for target in engine engine_tests runtime_boundary_tests project_manager_tests simpleengine_project player_scene_tests tilemap_animation_tests terrain_clip_tests asset_workspace_tests SimpleEngineEditor SimpleEnginePlayer snake_sample flappy_bird_sample basic_game_template; do
             copy_runtime_deps "build/${target}.exe"
           done
 
