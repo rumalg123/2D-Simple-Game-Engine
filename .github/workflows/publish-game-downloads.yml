@@ -112,17 +112,37 @@ jobs:
             }
             & ./tools/package.ps1 @options
 
+            if ($package.Name -eq 'SimpleEngineEditor-Windows-x64') {
+              # The editor download doubles as an authoring/export toolkit.
+              $editorRoot = Join-Path 'dist' $package.Name
+              Copy-Item -LiteralPath 'build/SimpleEnginePlayer.exe' -Destination $editorRoot -Force
+              Copy-Item -LiteralPath 'build/simpleengine_project.exe' -Destination $editorRoot -Force
+              New-Item -ItemType Directory -Force -Path (Join-Path $editorRoot 'tools') | Out-Null
+              Copy-Item -LiteralPath 'tools/export-project.ps1' -Destination (Join-Path $editorRoot 'tools/export-project.ps1') -Force
+              New-Item -ItemType Directory -Force -Path (Join-Path $editorRoot 'third_party_licenses') | Out-Null
+              Copy-Item -LiteralPath 'third_party_licenses/Lua.txt' -Destination (Join-Path $editorRoot 'third_party_licenses/Lua.txt') -Force
+              # Recreate the ZIP with its additional developer tooling.
+              Compress-Archive -Path (Join-Path $editorRoot '*') -DestinationPath (Join-Path 'dist' ($package.Name + '.zip')) -Force
+            }
+
             $zip = Join-Path 'dist' ($package.Name + '.zip')
             if (-not (Test-Path -LiteralPath $zip)) {
               throw "Missing package: $zip"
             }
           }
 
+          # Distribute a complete playable project produced by the same
+          # exporter available in the editor's Build Game panel.
+          & ./tools/export-project.ps1 -ProjectPath 'examples/terrain-clip-demo' -BuildDir 'build' -OutputDir 'dist' -PackageName 'TerrainClipsGame' -SkipBuild
+          if (-not (Test-Path 'dist/TerrainClipsGame.zip')) {
+            throw 'Missing exported terrain demo.'
+          }
+
           & ./tools/package-game-files.ps1 -OutputDir 'dist'
 
           $archives = @(Get-ChildItem -LiteralPath 'dist' -Filter '*.zip' -File | Sort-Object Name)
-          if ($archives.Count -ne 7) {
-            throw "Expected seven ZIP assets, found $($archives.Count)."
+          if ($archives.Count -ne 8) {
+            throw "Expected eight ZIP assets, found $($archives.Count)."
           }
 
           $hashes = @($archives | ForEach-Object {
@@ -146,11 +166,12 @@ jobs:
 
           Windows x64 downloads:
           - SimpleEngine-Windows-x64.zip: demo/editor application
-          - SimpleEngineEditor-Windows-x64.zip: project editor with New/Open Project launcher
+          - SimpleEngineEditor-Windows-x64.zip: editor with New/Open Project, Build Game, player and export tools
           - SimpleEnginePlayer-Windows-x64.zip: editor-free player with a sample JSON scene
           - SnakeSample-Windows-x64.zip: standalone Snake game
           - FlappyBirdSample-Windows-x64.zip: standalone Flappy Bird game
           - BasicGameTemplate-Windows-x64.zip: standalone starter game
+          - TerrainClipsGame.zip: example game exported from a Lua+tilemap+animation project
 
           Additional downloads:
           - GameFiles.zip: source game files, configurations, and original assets
@@ -169,8 +190,8 @@ jobs:
             Sort-Object Name |
             ForEach-Object { $_.FullName })
 
-          if ($assets.Count -ne 8) {
-            throw "Expected eight release assets, found $($assets.Count)."
+          if ($assets.Count -ne 9) {
+            throw "Expected nine release assets, found $($assets.Count)."
           }
 
           gh release create $tag @assets --target $env:GITHUB_SHA --title "Game downloads #$env:GITHUB_RUN_NUMBER" --notes $releaseNotes --latest
