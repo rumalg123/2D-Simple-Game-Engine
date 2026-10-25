@@ -577,6 +577,23 @@ void resolveCatalogTexturePaths(JsonValue& node,
         for(auto& element:node.array)
             resolveCatalogTexturePaths(element,assets,assetRoot);
     } else if(node.type==JsonValue::Type::Object) {
+        // Explicit compiled-export references take precedence over the
+        // authoring catalog. Only the exporter-owned Imported/ path qualifies.
+        const auto current=node.object.find("texturePath");
+        bool compiledExport=false;
+        if(current!=node.object.end() &&
+           current->second.type==JsonValue::Type::String) {
+            const std::filesystem::path candidate(current->second.string);
+            const std::string expectedPrefix =
+                assetRoot.filename().generic_string()+"/Imported/";
+            const auto normalized=candidate.lexically_normal().generic_string();
+            compiledExport=!candidate.is_absolute() &&
+                normalized.rfind(expectedPrefix,0)==0 &&
+                candidate.extension()==".seimg" &&
+                std::filesystem::is_regular_file(
+                    assetRoot.parent_path()/candidate);
+        }
+        if(compiledExport) return;
         const auto name=node.object.find("textureName");
         if(name!=node.object.end() && name->second.type==JsonValue::Type::String) {
             const auto* asset=assets.findById(name->second.string);
