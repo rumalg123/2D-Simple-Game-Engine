@@ -7,6 +7,12 @@ on:
     branches:
       - main
 
+# New commits supersede earlier candidate builds on the same pull request.
+# The main-branch release workflow remains serialized and never canceled.
+concurrency:
+  group: simpleengine-pr-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
