@@ -101,6 +101,7 @@ add_library(se_editor STATIC
     src/editor/EnginePanel.cpp
     src/editor/TilemapEditorPanel.cpp
     src/editor/AnimationTimelinePanel.cpp
+    src/editor/ProjectExportPanel.cpp
 )
 target_include_directories(se_editor PUBLIC
     include
