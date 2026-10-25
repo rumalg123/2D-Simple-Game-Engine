@@ -410,7 +410,7 @@ void Engine::initAssetManifest() {
     }
 
     const std::size_t added = assetManifest.scanDirectory(assetRoot);
-    if (config.editorEnabled && ((!manifestExists && assetManifest.entryCount() > 0) || added > 0)) {
+    if (config.editorEnabled && ((!manifestExists && assetManifest.entryCount() > 0) || added > 0 || assetManifest.needsUpgrade())) {
         if (!assetManifest.saveToFile(manifestPath.generic_string(), error)) {
             editorStatus = error;
         }
