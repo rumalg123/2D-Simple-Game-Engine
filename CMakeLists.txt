@@ -28,6 +28,7 @@ set(SIMPLEENGINE_RUNTIME_SOURCES
     src/Game.cpp
     src/GameConfig.cpp
     src/ProjectManager.cpp
+    src/ProjectValidation.cpp
     src/JobSystem.cpp
     src/GpuResourceManager.cpp
     src/RenderGraph.cpp
