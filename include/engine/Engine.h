@@ -110,6 +110,7 @@ private:
     void renderAssetBrowserPanel();
     void renderTilemapEditorPanel();
     void renderAnimationTimelinePanel();
+    void renderProjectExportPanel();
     void saveCurrentScene();
     void loadSavedScene();
     void saveSelectedPrefab();
