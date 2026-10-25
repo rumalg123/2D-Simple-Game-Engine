@@ -964,6 +964,7 @@ const char* AssetManifest::assetTypeToString(AssetType type) {
         case AssetType::Font: return "font";
         case AssetType::Prefab: return "prefab";
         case AssetType::Scene: return "scene";
+        case AssetType::Script: return "script";
         case AssetType::Unknown: return "unknown";
     }
 
