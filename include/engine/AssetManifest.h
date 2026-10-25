@@ -14,7 +14,8 @@ enum class AssetType {
     Audio,
     Font,
     Prefab,
-    Scene
+    Scene,
+    Script
 };
 
 struct SpriteSheetMetadata {
