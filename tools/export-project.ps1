@@ -62,7 +62,7 @@ function FixTextureReferences([object]$node,[string]$root,[string]$assetRoot,[ha
                     throw "Texture reference must be an existing project asset: $original"
                 }
                 $relative=$full.Substring($root.Length).TrimStart('\','/').Replace('\','/')
-                if ($original -cne $relative) {
+                if ([string]$property.Value -cne $relative) {
                     $property.Value=$relative
                     $changed=$true
                 }
