@@ -98,40 +98,6 @@ try {
             small.pixels[0]==0 && small.pixels[2]==255,
             "Max dimension and vertical flip not applied to compiled texture");
 
-    // Portable exports keep textureName for catalog identity, but the player
-    // must honor an explicit compiled texturePath under Assets/Imported.
-    std::filesystem::create_directories(root/"Assets/Imported");
-    const auto imported=root/"Assets/Imported"/(compiled->guid+".seimg");
-    std::filesystem::copy_file(compiled->file,imported,
-         std::filesystem::copy_options::overwrite_existing);
-    const auto compiledScene=root/"Assets/Scenes/Compiled.scene.json";
-    write(compiledScene,
-        "{\"entities\":[{\"id\":1,\"name\":{\"name\":\"Compiled Hero\"},"
-        "\"sprite\":{\"textureName\":\"texture:sprites/player\","
-        "\"texturePath\":\"Assets/Imported/"+compiled->guid+".seimg\"}}]}");
-    {
-        const auto oldWorkingDir=std::filesystem::current_path();
-        struct RestoreDirectory {
-            std::filesystem::path original;
-            ~RestoreDirectory(){std::error_code ec;
-                std::filesystem::current_path(original,ec);}
-        } restore{oldWorkingDir};
-        std::filesystem::current_path(root);
-        Scene loaded;
-        ResourceManager loadedResources;
-        std::string sceneError;
-        require(loadSceneFromJson(loaded,loadedResources,
-                compiledScene.string(),sceneError),
-                "Compiled scene could not load: "+sceneError);
-        const auto* sprite=loaded.getSprite(
-            loaded.findEntityByName("Compiled Hero"));
-        require(sprite && sprite->texture<loadedResources.textureCount(),
-                "Compiled scene sprite was not decoded");
-        require(loadedResources.getTexture(sprite->texture).sourcePath.find(
-                    "Assets/Imported/")!=std::string::npos,
-                "Catalog lookup incorrectly overrode explicit compiled texture");
-    }
-
     // Source edits cascade to dependent scenes even when GUIDs are unchanged.
     write(texture,"P3\n2 2\n255\n50 50 50  0 255 0\n0 0 255  255 255 0\n");
     const auto edited=AssetImportPipeline::build(root);
@@ -171,6 +137,40 @@ try {
     try {invalid.loadTextureFromFile("bad",corrupt.string());}
     catch(const std::exception&) {rejected=true;}
     require(rejected,"Truncated compiled texture was accepted");
+
+    // Portable exports keep textureName for catalog identity, but the player
+    // must honor an explicit compiled texturePath under Assets/Imported.
+    std::filesystem::create_directories(root/"Assets/Imported");
+    const auto imported=root/"Assets/Imported"/(compiled->guid+".seimg");
+    std::filesystem::copy_file(compiled->file,imported,
+         std::filesystem::copy_options::overwrite_existing);
+    const auto compiledScene=root/"Assets/Scenes/Compiled.scene.json";
+    write(compiledScene,
+        "{\"entities\":[{\"id\":1,\"name\":{\"name\":\"Compiled Hero\"},"
+        "\"sprite\":{\"textureName\":\"texture:sprites/player\","
+        "\"texturePath\":\"Assets/Imported/"+compiled->guid+".seimg\"}}]}");
+    {
+        const auto oldWorkingDir=std::filesystem::current_path();
+        struct RestoreDirectory {
+            std::filesystem::path original;
+            ~RestoreDirectory(){std::error_code ec;
+                std::filesystem::current_path(original,ec);}
+        } restore{oldWorkingDir};
+        std::filesystem::current_path(root);
+        Scene loaded;
+        ResourceManager loadedResources;
+        std::string sceneError;
+        require(loadSceneFromJson(loaded,loadedResources,
+                compiledScene.string(),sceneError),
+                "Compiled scene could not load: "+sceneError);
+        const auto* sprite=loaded.getSprite(
+            loaded.findEntityByName("Compiled Hero"));
+        require(sprite && sprite->texture<loadedResources.textureCount(),
+                "Compiled scene sprite was not decoded");
+        require(loadedResources.getTexture(sprite->texture).sourcePath.find(
+                    "Assets/Imported/")!=std::string::npos,
+                "Catalog lookup incorrectly overrode explicit compiled texture");
+    }
 
     std::cout<<"Import cache, decoded RGBA, settings, source/dependency/platform invalidation and cleanup passed.\n";
     return 0;
