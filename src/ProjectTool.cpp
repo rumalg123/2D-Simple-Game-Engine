@@ -1,4 +1,5 @@
 #include "ProjectManager.h"
+#include "ProjectValidation.h"
 #include "LuaScriptRuntime.h"
 #include "ResourceManager.h"
 #include "Scene.h"
@@ -38,39 +39,17 @@ int main(int argc, char** argv) {
     }
 
     if (operation == "validate") {
-        std::vector<std::string> errors;
-        LuaScriptRuntime lua;
-        ScriptSystem registered;
-        const std::size_t scripts = lua.registerDirectory(
-            registered, std::filesystem::path(project.config.assetRoot) / "Scripts", errors);
-
-        if (project.config.startupScene.empty()) {
-            errors.push_back("No startupScene is configured.");
-        } else {
-            Scene scene;
-            ResourceManager resources;
-            std::string sceneError;
-            if (!loadSceneFromJson(scene, resources, project.config.startupScene, sceneError)) {
-                errors.push_back(sceneError);
-            } else {
-                for (std::size_t i = 0; i < scene.getScriptPool().size(); ++i) {
-                    const ScriptComponent& script = scene.getScriptPool().componentAt(i);
-                    if (script.active && !script.scriptName.empty() &&
-                        !registered.hasScript(script.scriptName)) {
-                        errors.push_back("Scene references missing/invalid Lua script: " +
-                                         script.scriptName);
-                    }
-                }
-                std::cout << "Scene entities: " << scene.livingEntityCount() << '\n';
-            }
-        }
-        for (const auto& issue : errors) std::cerr << "Validation: " << issue << '\n';
-        if (!errors.empty()) {
-            std::cerr << "Project validation failed with " << errors.size() << " issue(s).\n";
+        const ProjectValidationResult result = validateProject(project);
+        for (const auto& issue : result.errors)
+            std::cerr << "Validation: " << issue << '\n';
+        if (!result.ok()) {
+            std::cerr << "Project validation failed with "
+                      << result.errors.size() << " issue(s).\n";
             return 1;
         }
-        std::cout << "Project validated successfully; " << scripts
-                  << " Lua script(s) compiled.\n";
+        std::cout << "Project validated successfully; " << result.scenes
+                  << " scene(s), " << result.entities << " entities and "
+                  << result.luaScripts << " Lua script(s) compiled.\n";
         return 0;
     }
 
