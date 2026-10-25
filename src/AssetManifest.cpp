@@ -571,6 +571,7 @@ bool safeStoredAssetPath(const std::string& value) {
 }
 void AssetManifest::clear() {
     entries.clear();
+    needsUpgrade_ = false;
 }
 
 bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
@@ -602,6 +603,7 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
         return false;
     }
 
+    bool parsedUpgrade = false;
     std::vector<AssetManifestEntry> parsedEntries;
     parsedEntries.reserve(assets->array.size());
     for (const JsonValue& asset : assets->array) {
@@ -632,6 +634,7 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
             return false;
         }
         if(entry.guid.empty()) {
+            parsedUpgrade = true;
             do { entry.guid=newAssetGuid(); }
             while(std::any_of(parsedEntries.begin(),parsedEntries.end(),
                   [&entry](const AssetManifestEntry& other){return other.guid==entry.guid;}));
@@ -686,6 +689,7 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
     }
 
     entries = std::move(parsedEntries);
+    needsUpgrade_ = parsedUpgrade;
     return true;
 }
 
