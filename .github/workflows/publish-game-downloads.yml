@@ -113,15 +113,8 @@ jobs:
             & ./tools/package.ps1 @options
 
             if ($package.Name -eq 'SimpleEngineEditor-Windows-x64') {
-              # The editor download doubles as an authoring/export toolkit.
               $editorRoot = Join-Path 'dist' $package.Name
-              Copy-Item -LiteralPath 'build/SimpleEnginePlayer.exe' -Destination $editorRoot -Force
-              Copy-Item -LiteralPath 'build/simpleengine_project.exe' -Destination $editorRoot -Force
-              New-Item -ItemType Directory -Force -Path (Join-Path $editorRoot 'tools') | Out-Null
-              Copy-Item -LiteralPath 'tools/export-project.ps1' -Destination (Join-Path $editorRoot 'tools/export-project.ps1') -Force
-              New-Item -ItemType Directory -Force -Path (Join-Path $editorRoot 'third_party_licenses') | Out-Null
-              Copy-Item -LiteralPath 'third_party_licenses/Lua.txt' -Destination (Join-Path $editorRoot 'third_party_licenses/Lua.txt') -Force
-              # Recreate the ZIP with its additional developer tooling.
+              & ./tools/bundle-export-toolkit.ps1 -EditorPackage $editorRoot -BuildDir 'build' -RepoRoot '.'
               Compress-Archive -Path (Join-Path $editorRoot '*') -DestinationPath (Join-Path 'dist' ($package.Name + '.zip')) -Force
             }
 
