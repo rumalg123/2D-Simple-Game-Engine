@@ -942,6 +942,9 @@ AssetType AssetManifest::inferAssetType(const std::filesystem::path& path) {
         extension == ".tga" || extension == ".ppm") {
         return AssetType::Texture;
     }
+    if (extension == ".lua") {
+        return AssetType::Script;
+    }
     if (extension == ".wav") {
         return AssetType::Audio;
     }
