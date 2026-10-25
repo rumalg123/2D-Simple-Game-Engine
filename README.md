@@ -54,6 +54,31 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Persistent Asset Database, GUIDs and Dependency Inspection
+
+SimpleEngine now tracks project assets using persistent random GUIDs alongside
+the existing asset IDs. Editing a file updates its source fingerprint without
+changing identity. The Asset Browser displays metadata and lets you audit the
+catalog, copy GUIDs and move supported file-backed assets without breaking
+scene texture references.
+
+For independent projects, run:
+
+```powershell
+.\build\simpleengine_project.exe assets-sync "C:\Games\MyGame"
+.\build\simpleengine_project.exe assets-audit "C:\Games\MyGame"
+.\build\simpleengine_project.exe assets-deps "C:\Games\MyGame" "texture:sprites/hero"
+.\build\simpleengine_project.exe assets-move "C:\Games\MyGame" "texture:sprites/hero" "Sprites/hero-renamed.png"
+```
+
+Saved scenes and prefabs resolve catalog-backed texture references by ID,
+and exported game bundles rewrite texture paths from the current catalog.
+The database is a source catalog with dependency/fingerprint support; binary
+import artifacts and full cross-platform export profiles are future phases.
+
+Read [Asset Database Workflow](docs/ASSET_DATABASE_WORKFLOW.md) for
+identity, safety, CI, supported move types, and legacy migration.
+
 ## Build and export your own Windows games
 
 SimpleEngine now supports complete Windows x64 game packaging, not just
