@@ -54,6 +54,36 @@ See [Project Workflow](docs/PROJECT_WORKFLOW.md) for the full process,
 and [Architecture Roadmap](docs/ENGINE_ARCHITECTURE_ROADMAP.md) for upcoming
 scripting, non-destructive Play Mode, GUIDs and export tooling.
 
+## Build and export your own Windows games
+
+SimpleEngine now supports complete Windows x64 game packaging, not just
+downloading compiled engine demos. Create a project, add scenes and Lua
+gameplay, save it and open **Build Game** in the editor. The resulting ZIP
+contains the game executable, runtime libraries and project assets, but no
+editor or C++ source checkout.
+
+Developer CLI:
+
+```powershell
+.\build\simpleengine_project.exe validate "C:\Games\MyGame"
+powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\export-project.ps1 -ProjectPath "C:\Games\MyGame" -BuildDir build
+```
+
+The bundled player auto-opens its adjacent `project.simple.json` when
+double-clicked and can check the distribution without a graphics window:
+
+```powershell
+.\MyGame.exe --verify-bundle
+```
+
+The release editor download now includes the player, project CLI, game
+export script and dependencies. After a main-branch build, GitHub Releases
+also includes a freshly exported example game ZIP.
+
+Read [Game Export Workflow](docs/GAME_EXPORT_WORKFLOW.md) for the full
+editor/CLI process, packaging layout, asset policies, safety limitations,
+and supported platform targets.
+
 ## Connected Terrain, Layers and Named Animation Clips
 
 The editor now supports **4-direction terrain autotiling** (16 atlas
