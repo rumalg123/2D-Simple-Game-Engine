@@ -1,4 +1,5 @@
 #include "Engine.h"
+#include "AssetWorkspace.h"
 #include "imgui.h"
 
 #include <algorithm>
@@ -68,6 +69,24 @@ void Engine::renderAssetBrowserPanel() {
     }
     ImGui::SameLine();
     ImGui::Checkbox("Auto Reload", &hotReloadEnabled);
+
+    ImGui::SeparatorText("Asset Database");
+    if (ImGui::Button("Audit Asset Database")) {
+        AssetWorkspace workspace(assetRoot);
+        std::string auditError;
+        if (!workspace.open(auditError)) {
+            editorStatus = auditError;
+        } else {
+            const AssetAudit report = workspace.audit();
+            editorStatus = report.valid()
+                ? ("Asset audit passed: " + std::to_string(report.indexed) +
+                   " indexed assets.")
+                : ("Asset audit detected " + std::to_string(report.errors.size()) +
+                   " issue(s): " + report.errors.front());
+        }
+    }
+    ImGui::SameLine();
+    ImGui::TextDisabled("IDs/GUIDs stay stable across managed file moves.");
 
     ImGui::SeparatorText("Lua Gameplay Scripts");
     static char newScriptName[64] = "NewBehaviour";
@@ -155,11 +174,44 @@ void Engine::renderAssetBrowserPanel() {
     }
 
     for (const AssetManifestEntry& entry : entries) {
+        ImGui::PushID(entry.id.c_str());
+
         ImGui::Text(
             "%s [%s]",
             entry.id.c_str(),
             AssetManifest::assetTypeToString(entry.type));
         ImGui::TextDisabled("%s", entry.path.c_str());
+        ImGui::TextDisabled("GUID: %s  Hash: %s  Bytes: %llu",
+                            entry.guid.c_str(), entry.contentHash.c_str(),
+                            static_cast<unsigned long long>(entry.sourceBytes));
+        if (ImGui::SmallButton("Copy GUID"))
+            ImGui::SetClipboardText(entry.guid.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Move / Rename") && !playSession.active()) {
+            ImGui::OpenPopup("Move Asset");
+        }
+        if (ImGui::BeginPopupModal("Move Asset", nullptr,
+                                  ImGuiWindowFlags_AlwaysAutoResize)) {
+            static char newPath[512] = {};
+            ImGui::Text("Asset: %s", entry.id.c_str());
+            ImGui::TextDisabled("Only supported file-backed assets; destination directory must exist.");
+            ImGui::InputText("New relative asset path", newPath, sizeof(newPath));
+            if(ImGui::Button("Move") && !playSession.active()) {
+                AssetWorkspace workspace(assetRoot);
+                std::string error;
+                if(workspace.open(error) &&
+                   workspace.move(entry.id,std::string(newPath),error)) {
+                    assetManifest=workspace.index();
+                    editorStatus="Asset moved; reopen your scene to reload moved textures.";
+                    newPath[0]='\0';
+                    ImGui::CloseCurrentPopup();
+                } else editorStatus="Asset move rejected: "+error;
+            }
+            ImGui::SameLine();
+            if(ImGui::Button("Cancel")) ImGui::CloseCurrentPopup();
+            ImGui::EndPopup();
+        }
+
 
         const std::string assetPath = (assetRoot / entry.path).generic_string();
 
@@ -197,6 +249,7 @@ void Engine::renderAssetBrowserPanel() {
             }
             ImGui::PopID();
         }
+        ImGui::PopID();
     }
 
     ImGui::End();

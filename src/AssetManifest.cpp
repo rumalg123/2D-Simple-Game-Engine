@@ -5,6 +5,10 @@
 #include <filesystem>
 #include <fstream>
 #include <map>
+#include <iomanip>
+#include <random>
+#include <cstdint>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -525,8 +529,49 @@ void writeAudioMetadata(std::ostream& output, const AudioMetadata& metadata) {
 }
 }
 
+namespace {
+std::string newAssetGuid() {
+    // Distinct from legacy, path-derived IDs. Random GUIDs survive moves.
+    std::random_device source;
+    std::ostringstream result;
+    result << std::hex << std::setfill('0');
+    for (int i=0;i<16;++i)
+        result << std::setw(2) << (source() & 0xffU);
+    return result.str();
+}
+void updateFingerprint(AssetManifestEntry& asset,
+                       const std::filesystem::path& file) {
+    std::ifstream input(file, std::ios::binary);
+    if(!input) return;
+    std::uint64_t hash=14695981039346656037ULL;
+    std::uintmax_t bytes=0;
+    char buffer[8192];
+    while(input) {
+        input.read(buffer,sizeof(buffer));
+        const std::streamsize count=input.gcount();
+        for(std::streamsize i=0;i<count;++i) {
+            hash^=static_cast<unsigned char>(buffer[i]);
+            hash*=1099511628211ULL;
+        }
+        bytes+=static_cast<std::uintmax_t>(count);
+    }
+    std::ostringstream value;
+    value << std::hex << std::setfill('0') << std::setw(16) << hash;
+    asset.contentHash=value.str(); // FNV-1a change fingerprint, not security hash.
+    asset.sourceBytes=bytes;
+}
+bool safeStoredAssetPath(const std::string& value) {
+    if(value.empty()) return false;
+    const std::filesystem::path p(value);
+    if(p.is_absolute() || p.has_root_name() || p.has_root_directory()) return false;
+    for(const auto& item:p)
+        if(item==".." || item=="." || item.empty()) return false;
+    return true;
+}
+}
 void AssetManifest::clear() {
     entries.clear();
+    needsUpgrade_ = false;
 }
 
 bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
@@ -558,6 +603,7 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
         return false;
     }
 
+    bool parsedUpgrade = false;
     std::vector<AssetManifestEntry> parsedEntries;
     parsedEntries.reserve(assets->array.size());
     for (const JsonValue& asset : assets->array) {
@@ -568,9 +614,36 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
 
         AssetManifestEntry entry;
         entry.id = readStringField(asset, "id", "");
+        entry.guid = readStringField(asset, "guid", "");
+        entry.contentHash = readStringField(asset, "contentHash", "");
+        if (const JsonValue* bytes=objectField(asset,"sourceBytes")) {
+            if(bytes->type==JsonValue::Type::Number && bytes->number>=0)
+                entry.sourceBytes=static_cast<std::uintmax_t>(bytes->number);
+        }
+        if (const JsonValue* deps=objectField(asset, "dependencies")) {
+            if (deps->type==JsonValue::Type::Array)
+                for(const JsonValue& dep:deps->array)
+                    if(dep.type==JsonValue::Type::String)
+                        entry.dependencies.push_back(dep.string);
+        }
         entry.type = assetTypeFromString(readStringField(asset, "type", "unknown"));
         entry.name = readStringField(asset, "name", "");
         entry.path = normalizeStoredPath(readStringField(asset, "path", ""));
+        if(!safeStoredAssetPath(entry.path)) {
+            error=path+": unsafe asset path '"+entry.path+"'.";
+            return false;
+        }
+        if(entry.guid.empty()) {
+            parsedUpgrade = true;
+            do { entry.guid=newAssetGuid(); }
+            while(std::any_of(parsedEntries.begin(),parsedEntries.end(),
+                  [&entry](const AssetManifestEntry& other){return other.guid==entry.guid;}));
+        }
+        if(std::any_of(parsedEntries.begin(),parsedEntries.end(),
+             [&entry](const AssetManifestEntry& other){return other.guid==entry.guid;})) {
+            error=path+": duplicate asset GUID '"+entry.guid+"'.";
+            return false;
+        }
         if (entry.id.empty() || entry.path.empty()) {
             error = path + ": asset manifest entries require non-empty id and path fields.";
             return false;
@@ -616,6 +689,7 @@ bool AssetManifest::loadFromFile(const std::string& path, std::string& error) {
     }
 
     entries = std::move(parsedEntries);
+    needsUpgrade_ = parsedUpgrade;
     return true;
 }
 
@@ -648,6 +722,15 @@ bool AssetManifest::saveToFile(const std::string& path, std::string& error) cons
         const AssetManifestEntry& entry = sortedEntries[index];
         output << "    {\n";
         output << "      \"id\": \"" << escapeJson(entry.id) << "\",\n";
+        output << "      \"guid\": \"" << escapeJson(entry.guid) << "\",\n";
+        output << "      \"contentHash\": \"" << escapeJson(entry.contentHash) << "\",\n";
+        output << "      \"sourceBytes\": " << entry.sourceBytes << ",\n";
+        output << "      \"dependencies\": [";
+        for(std::size_t d=0; d<entry.dependencies.size(); ++d) {
+            if(d) output << ", ";
+            output << "\"" << escapeJson(entry.dependencies[d]) << "\"";
+        }
+        output << "],\n";
         output << "      \"type\": \"" << assetTypeToString(entry.type) << "\",\n";
         output << "      \"name\": \"" << escapeJson(entry.name) << "\",\n";
         output << "      \"path\": \"" << escapeJson(entry.path) << "\"";
@@ -710,6 +793,10 @@ AssetManifestEntry& AssetManifest::importAsset(
     entry.path = storedPath;
     entry.name = displayNameFromPath(storedPath);
     entry.id = uniqueIdForPath(entries, resolvedType, storedPath);
+    do { entry.guid=newAssetGuid(); }
+    while(std::any_of(entries.begin(),entries.end(),
+          [&entry](const AssetManifestEntry& e){return e.guid==entry.guid;}));
+    updateFingerprint(entry,assetRoot/storedPath);
 
     entries.push_back(std::move(entry));
     return entries.back();
@@ -738,13 +825,67 @@ std::size_t AssetManifest::scanDirectory(const std::filesystem::path& assetRoot)
     std::size_t added = 0;
     for (const std::filesystem::path& path : paths) {
         const std::size_t before = entries.size();
-        importAsset(assetRoot, path);
+        AssetManifestEntry& item=importAsset(assetRoot,path);
+        if(item.guid.empty()) item.guid=newAssetGuid();
+        updateFingerprint(item,path);
         if (entries.size() > before) {
             ++added;
         }
     }
 
     return added;
+}
+
+const AssetManifestEntry* AssetManifest::findByGuid(const std::string& guid) const {
+    const auto found=std::find_if(entries.begin(),entries.end(),
+             [&guid](const AssetManifestEntry& e){return e.guid==guid;});
+    return found==entries.end()?nullptr:&*found;
+}
+
+bool AssetManifest::moveAsset(const std::filesystem::path& root,
+                              const std::string& id,
+                              const std::string& newRelative,
+                              std::string& error) {
+    AssetManifestEntry* entry=findById(id);
+    if(!entry) {error="Unknown asset ID: "+id;return false;}
+    const std::filesystem::path desired(newRelative);
+    const std::string relative=desired.lexically_normal().generic_string();
+    if(!safeStoredAssetPath(relative) || !safeStoredAssetPath(newRelative)) {
+        error="Invalid destination asset path.";return false;
+    }
+    if(findByPath(relative)) {
+        error="Destination already cataloged: "+relative;return false;
+    }
+    if(inferAssetType(desired)!=entry->type) {
+        error="A managed move must preserve the asset file type.";return false;
+    }
+    const auto from=root/entry->path, to=root/desired;
+    std::error_code ec;
+    const auto canonicalRoot=std::filesystem::canonical(root,ec);
+    if(ec) {error="Missing asset root.";return false;}
+    const auto source=std::filesystem::canonical(from,ec);
+    if(ec || !std::filesystem::is_regular_file(source)) {
+        error="Source file missing.";return false;
+    }
+    auto within=[&](const std::filesystem::path& path) {
+        const auto rel=path.lexically_relative(canonicalRoot);
+        return !rel.empty() && *rel.begin()!=".." && !rel.is_absolute();
+    };
+    if(!within(source) || std::filesystem::is_symlink(from)) {
+        error="Source points outside the asset tree.";return false;
+    }
+    const auto parent=std::filesystem::canonical(to.parent_path(),ec);
+    if(ec || !within(parent) && parent!=canonicalRoot) {
+        error="Destination directory must exist inside asset tree.";return false;
+    }
+    if(std::filesystem::exists(to)) {
+        error="Destination already exists.";return false;
+    }
+    std::filesystem::rename(from,to,ec);
+    if(ec) {error="Rename failed: "+ec.message();return false;}
+    entry->path=relative;
+    entry->name=displayNameFromPath(relative);
+    return true;
 }
 
 const AssetManifestEntry* AssetManifest::findById(const std::string& id) const {
@@ -805,6 +946,9 @@ AssetType AssetManifest::inferAssetType(const std::filesystem::path& path) {
         extension == ".tga" || extension == ".ppm") {
         return AssetType::Texture;
     }
+    if (extension == ".lua") {
+        return AssetType::Script;
+    }
     if (extension == ".wav") {
         return AssetType::Audio;
     }
@@ -824,6 +968,7 @@ const char* AssetManifest::assetTypeToString(AssetType type) {
         case AssetType::Font: return "font";
         case AssetType::Prefab: return "prefab";
         case AssetType::Scene: return "scene";
+        case AssetType::Script: return "script";
         case AssetType::Unknown: return "unknown";
     }
 
@@ -852,6 +997,9 @@ AssetType AssetManifest::assetTypeFromString(const std::string& type) {
     }
     if (normalized == "scene") {
         return AssetType::Scene;
+    }
+    if (normalized == "script") {
+        return AssetType::Script;
     }
     return AssetType::Unknown;
 }

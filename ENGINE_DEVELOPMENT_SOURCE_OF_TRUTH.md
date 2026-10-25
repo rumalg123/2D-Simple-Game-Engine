@@ -130,6 +130,28 @@ Status values:
   compression.
 - Guide: [Game Export Workflow](docs/GAME_EXPORT_WORKFLOW.md).
 
+## Stable Asset Database and Dependency Graph (This PR)
+
+- **Implemented:** Persistent random 128-bit GUIDs, stable legacy IDs,
+  FNV-1a source fingerprints, source size and dependency metadata in
+  the existing `Assets/asset_manifest.json` format.
+- **Implemented:** Index Lua scripts, scan/reimport known source files,
+  discover scene/prefab texture and script dependencies, and inspect
+  forward/reverse dependencies from CLI.
+- **Implemented:** AssetWorkspace audit of missing source files,
+  duplicated GUIDs, and unresolved catalog dependencies.
+- **Implemented:** Managed moves of supported file-backed resources that
+  preserve ID/GUID and enforce safe paths, types, and destinations.
+- **Implemented:** Scene and prefab texture lookup by stable catalog ID,
+  plus portable path remapping in the exported Windows game ZIP.
+- **Implemented:** Asset Browser shows GUID/hash/size, Audit, Copy GUID,
+  Move/Rename actions. Migrate older GUID-less catalogs on editor open.
+- **Implemented:** Headless asset-workspace and CLI tests; export smoke
+  exercises managed texture moves and verified game bundles.
+- **Next:** Source import artifacts, GPU texture conversion, centralized
+  resource GUIDs for scripts/scenes/prefabs, cross-platform exporters.
+- Guide: [Asset Database Workflow](docs/ASSET_DATABASE_WORKFLOW.md).
+
 ## Current Focus
 
 1. Asset metadata consumers for animation, font, and audio workflows.

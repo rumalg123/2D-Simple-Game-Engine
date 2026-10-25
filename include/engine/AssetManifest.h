@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -13,7 +14,8 @@ enum class AssetType {
     Audio,
     Font,
     Prefab,
-    Scene
+    Scene,
+    Script
 };
 
 struct SpriteSheetMetadata {
@@ -43,6 +45,12 @@ struct AudioMetadata {
 
 struct AssetManifestEntry {
     std::string id;
+    // Path-independent identity and source fingerprint. Legacy ID remains
+    // stable for existing scene textureName references.
+    std::string guid;
+    std::string contentHash;
+    std::uintmax_t sourceBytes = 0;
+    std::vector<std::string> dependencies;
     AssetType type = AssetType::Unknown;
     std::string name;
     std::string path;
@@ -63,6 +71,10 @@ public:
         const std::filesystem::path& assetPath,
         AssetType type = AssetType::Unknown);
     std::size_t scanDirectory(const std::filesystem::path& assetRoot);
+    bool moveAsset(const std::filesystem::path& assetRoot,
+                   const std::string& id, const std::string& newRelativePath,
+                   std::string& error);
+    const AssetManifestEntry* findByGuid(const std::string& guid) const;
 
     const AssetManifestEntry* findById(const std::string& id) const;
     AssetManifestEntry* findById(const std::string& id);
@@ -70,6 +82,7 @@ public:
     AssetManifestEntry* findByPath(const std::string& path);
     const std::vector<AssetManifestEntry>& getEntries() const;
     std::size_t entryCount() const;
+    bool needsUpgrade() const { return needsUpgrade_; }
 
     static AssetType inferAssetType(const std::filesystem::path& path);
     static const char* assetTypeToString(AssetType type);
@@ -78,4 +91,5 @@ public:
 
 private:
     std::vector<AssetManifestEntry> entries;
+    bool needsUpgrade_ = false;
 };

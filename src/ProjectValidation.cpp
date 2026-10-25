@@ -1,4 +1,5 @@
 #include "ProjectValidation.h"
+#include "AssetWorkspace.h"
 
 #include "LuaScriptRuntime.h"
 #include "ResourceManager.h"
@@ -17,6 +18,20 @@ ProjectValidationResult validateProject(const ProjectInfo& project) {
     ProjectValidationResult result;
     const auto assetRoot = std::filesystem::path(project.config.assetRoot);
     const auto scriptsRoot = assetRoot / "Scripts";
+    // A project that opted into a saved asset database should not export
+    // with broken GUID dependencies or source files that no longer exist.
+    const auto databaseFile=AssetManifest::defaultManifestPath(assetRoot);
+    if(std::filesystem::is_regular_file(databaseFile)) {
+        AssetWorkspace workspace(assetRoot);
+        std::string databaseError;
+        if(!workspace.open(databaseError)) {
+            result.errors.push_back("Asset database: "+databaseError);
+        } else {
+            const AssetAudit audit=workspace.audit();
+            for(const auto& issue:audit.errors)
+                result.errors.push_back("Asset database: "+issue);
+        }
+    }
     LuaScriptRuntime lua;
     ScriptSystem scripts;
     result.luaScripts = lua.registerDirectory(scripts, scriptsRoot, result.errors);

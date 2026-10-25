@@ -1,4 +1,5 @@
 #include "SceneSerializer.h"
+#include "AssetManifest.h"
 #include "AnimationTools.h"
 #include "TilemapTools.h"
 
@@ -563,6 +564,52 @@ void readScriptParameters(const JsonValue& scriptObject, ScriptComponent& script
         if (parameter.second.type == JsonValue::Type::Number) {
             script.parameters[parameter.first] = static_cast<float>(parameter.second.number);
         }
+    }
+}
+
+// Resolve stable catalog IDs before any legacy texturePath fallback. The
+// manifest lives in the Assets ancestor of scenes/prefabs. No global current
+// project state or changes to the serialized authoring document are needed.
+void resolveCatalogTexturePaths(JsonValue& node,
+                                const AssetManifest& assets,
+                                const std::filesystem::path& assetRoot) {
+    if(node.type==JsonValue::Type::Array) {
+        for(auto& element:node.array)
+            resolveCatalogTexturePaths(element,assets,assetRoot);
+    } else if(node.type==JsonValue::Type::Object) {
+        const auto name=node.object.find("textureName");
+        if(name!=node.object.end() && name->second.type==JsonValue::Type::String) {
+            const auto* asset=assets.findById(name->second.string);
+            if(asset && (asset->type==AssetType::Texture ||
+                         asset->type==AssetType::SpriteSheet)) {
+                const auto file=assetRoot/asset->path;
+                if(std::filesystem::is_regular_file(file) &&
+                   !std::filesystem::is_symlink(file)) {
+                    JsonValue path;
+                    path.type=JsonValue::Type::String;
+                    path.string=file.lexically_normal().string();
+                    node.object["texturePath"]=std::move(path);
+                }
+            }
+        }
+        for(auto& pair:node.object)
+            resolveCatalogTexturePaths(pair.second,assets,assetRoot);
+    }
+}
+void resolveSceneCatalog(JsonValue& root,const std::string& fileName) {
+    auto directory=std::filesystem::absolute(fileName).parent_path();
+    for(int depth=0;depth<8 && !directory.empty();++depth) {
+        const auto manifest=AssetManifest::defaultManifestPath(directory);
+        if(std::filesystem::is_regular_file(manifest)) {
+            AssetManifest assets;
+            std::string error;
+            if(assets.loadFromFile(manifest.string(),error))
+                resolveCatalogTexturePaths(root,assets,directory);
+            return;
+        }
+        const auto parent=directory.parent_path();
+        if(parent==directory) break;
+        directory=parent;
     }
 }
 
@@ -1247,6 +1294,7 @@ bool loadSceneFromJson(Scene& scene, ResourceManager& resources, const std::stri
     if (!parseJsonFile(path, root, error)) {
         return false;
     }
+    resolveSceneCatalog(root,path);
 
     const JsonValue* entities = objectField(root, "entities");
     if (!entities || entities->type != JsonValue::Type::Array) {
@@ -1311,6 +1359,7 @@ bool loadPrefabFromJson(
     if (!parseJsonFile(path, root, error)) {
         return false;
     }
+    resolveSceneCatalog(root,path);
 
     const JsonValue* components = objectField(root, "components");
     if (!components || components->type != JsonValue::Type::Object) {

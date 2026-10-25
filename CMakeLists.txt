@@ -17,6 +17,7 @@ find_package(Lua 5.4 EXACT REQUIRED)
 # Dear ImGui, and can be linked directly by headless applications and tests.
 set(SIMPLEENGINE_RUNTIME_SOURCES
     src/AssetManifest.cpp
+    src/AssetWorkspace.cpp
     src/AudioSystem.cpp
     src/Renderer.cpp
     src/Scene.cpp
@@ -252,6 +253,17 @@ add_test(
         -RepoRoot ${CMAKE_SOURCE_DIR}
         -BuildDir ${CMAKE_BINARY_DIR}
         -OutputDir ${CMAKE_BINARY_DIR}/export_ci_test
+)
+
+# Asset pipeline: catalog GUIDs, safe moves and scene/path resolution.
+add_executable(asset_workspace_tests tests/AssetWorkspaceTests.cpp)
+target_link_libraries(asset_workspace_tests PRIVATE se_runtime)
+add_test(NAME asset_workspace_tests COMMAND asset_workspace_tests)
+add_test(NAME asset_cli_smoke
+    COMMAND ${CMAKE_COMMAND}
+        -DPROJECT_CLI=$<TARGET_FILE:simpleengine_project>
+        -DWORK=${CMAKE_BINARY_DIR}/asset_cli_smoke
+        -P ${CMAKE_SOURCE_DIR}/tests/AssetCliSmokeTests.cmake
 )
 
 add_executable(snake_sample

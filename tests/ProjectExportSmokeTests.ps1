@@ -60,6 +60,36 @@ if($LASTEXITCODE -ne 0) {
 if($LASTEXITCODE -ne 0) {
     throw "Packaged scene and scripts are not loadable by engine CLI."
 }
+# A game with a stable asset reference must export after its texture moves.
+$textureFile=Join-Path $project "Assets/Sprites/hero.ppm"
+Set-Content -LiteralPath $textureFile -Value "P3`n1 1`n255`n255 0 0" -Encoding ASCII
+$sourceScene=Join-Path $project "Assets/Scenes/Main.scene.json"
+$sceneSource=Get-Content -Raw -LiteralPath $sourceScene | ConvertFrom-Json
+$sceneSource.entities[0] | Add-Member -MemberType NoteProperty -Name sprite -Value ([pscustomobject]@{
+    halfWidth=0.1
+    halfHeight=0.1
+    textureName="texture:sprites/hero"
+    texturePath="Assets/Sprites/hero.ppm"
+})
+[IO.File]::WriteAllText($sourceScene,($sceneSource | ConvertTo-Json -Depth 100),
+    (New-Object Text.UTF8Encoding($false)))
+& $cli assets-sync $project
+if($LASTEXITCODE -ne 0) {throw "Could not index test texture asset."}
+& $cli assets-move $project "texture:sprites/hero" "Sprites/hero-moved.ppm"
+if($LASTEXITCODE -ne 0) {throw "Could not move indexed texture asset."}
+$movedOutput=Join-Path $OutputDir "moved-exports"
+& $exporter -ProjectPath $project -BuildDir $BuildDir -OutputDir $movedOutput -SkipBuild -NoZip
+$movedGame=Join-Path $movedOutput "SmokeGame"
+if(!(Test-Path (Join-Path $movedGame "Assets/Sprites/hero-moved.ppm"))) {
+    throw "Renamed texture is missing from exported game."
+}
+$relocatedScene=Get-Content -Raw -LiteralPath (Join-Path $movedGame "Assets/Scenes/Main.scene.json") | ConvertFrom-Json
+if($relocatedScene.entities[0].sprite.texturePath -ne "Assets/Sprites/hero-moved.ppm") {
+    throw "Exporter failed to rewrite outdated texture path using catalog ID."
+}
+& (Join-Path $movedGame "SmokeGame.exe") --verify-bundle
+if($LASTEXITCODE -ne 0) {throw "A game with a moved texture cannot validate its bundle."}
+
 # Reject invalid scripts, preserving a previous working export ZIP.
 $existingZipHash=(Get-FileHash -LiteralPath $bundle -Algorithm SHA256).Hash
 $badLua=Join-Path $project "Assets/Scripts/Invalid.lua"
